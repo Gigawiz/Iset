@@ -65,6 +65,94 @@ namespace Iset
                        string msg = "The user " + e.GetArg("username") + " " + isBanned(e.GetArg("username"));
                        await e.Channel.SendMessage(msg);
                    });
+            _client.GetService<CommandService>().CreateCommand("restorechar") //create command greet
+                  .Description("restores a deleted character") //add description, it will be shown when ~help is used
+                  .Parameter("username", ParameterType.Required)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "restorechar"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("username")))
+                      {
+                          await e.Channel.SendMessage("Invalid Data.");
+                          return;
+                      }
+                      await e.Channel.SendMessage(restoreDeletedCharacter(e.GetArg("username")));
+                  });
+            _client.GetService<CommandService>().CreateCommand("deletechar") //create command greet
+                  .Description("delete a character") //add description, it will be shown when ~help is used
+                  .Parameter("username", ParameterType.Required)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "deletechar"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("username")))
+                      {
+                          await e.Channel.SendMessage("Invalid Data.");
+                          return;
+                      }
+                      await e.Channel.SendMessage(deleteCharacter(e.GetArg("username")));
+                  });
+            _client.GetService<CommandService>().CreateCommand("setlevel") //create command greet
+                  .Description("set the level of a character") //add description, it will be shown when ~help is used
+                  .Parameter("username", ParameterType.Required)
+                  .Parameter("level", ParameterType.Optional)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "setlevel"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("username")))
+                      {
+                          await e.Channel.SendMessage("Invalid Data.");
+                          return;
+                      }
+                      int newlevel = 90;
+                      if (!String.IsNullOrEmpty(e.GetArg("level")))
+                      {
+                          if (!int.TryParse(e.GetArg("level"), out newlevel))
+                          {
+                              await e.Channel.SendMessage("Invalid level given! The value _MUST BE A NUMBER_");
+                              return;
+                          }
+                      }
+                      await e.Channel.SendMessage(setCharLevel(e.GetArg("username"), newlevel));
+                  });
+            _client.GetService<CommandService>().CreateCommand("giveap") //create command greet
+                  .Description("give ap to a character") //add description, it will be shown when ~help is used
+                  .Parameter("username", ParameterType.Required)
+                  .Parameter("amount", ParameterType.Optional)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "giveap"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("username")))
+                      {
+                          await e.Channel.SendMessage("Invalid Data.");
+                          return;
+                      }
+                      int amount = 90;
+                      if (!String.IsNullOrEmpty(e.GetArg("amount")))
+                      {
+                          if (!int.TryParse(e.GetArg("amount"), out amount))
+                          {
+                              await e.Channel.SendMessage("Invalid level given! The value _MUST BE A NUMBER_");
+                              return;
+                          }
+                      }
+                      await e.Channel.SendMessage(giveApToChar(e.GetArg("username"), amount));
+                  });
             _client.GetService<CommandService>().CreateCommand("getaccountid") //create command greet
        .Description("get the account id for a character") //add description, it will be shown when ~help is used
        .Parameter("username", ParameterType.Required)
@@ -393,9 +481,129 @@ namespace Iset
             return banResult;
         }
 
+        public string restoreDeletedCharacter(string charactername)
+        {
+            string retmsg = null;
+            string verifyChar = getUserIdFromCharacterName(charactername);
+            if (String.IsNullOrEmpty(verifyChar))
+            {
+                return "That is not a valid character name!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE CharacterInfo SET Status=0 WHERE Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", charactername);
+                    oCmd.Parameters.AddWithValue("@fStatus", 0);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                retmsg = "The character " + charactername + " has been restored. Please go back to the home screen to see it!";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return retmsg;
+        }
+
+        public string setCharLevel(string charactername, int newlevel)
+        {
+            string retmsg = null;
+            string verifyChar = getUserIdFromCharacterName(charactername);
+            if (String.IsNullOrEmpty(verifyChar))
+            {
+                return "That is not a valid character name!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE CharacterInfo SET Level=@fLevel WHERE Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", charactername);
+                    oCmd.Parameters.AddWithValue("@fLevel", newlevel);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                retmsg = charactername + "'s level has been set to " + newlevel.ToString() + ". Please relog to see your new level!";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return retmsg;
+        }
+
+        public string giveApToChar(string charactername, int amount)
+        {
+            string retmsg = null;
+            string verifyChar = getUserIdFromCharacterName(charactername);
+            if (String.IsNullOrEmpty(verifyChar))
+            {
+                return "That is not a valid character name!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE CharacterInfo SET AP=AP + @fNewAP WHERE Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", charactername);
+                    oCmd.Parameters.AddWithValue("@fNewAP", amount);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                retmsg = "Successfully gave " + amount.ToString() + " ap to " + charactername + "! They will need to relog to see the AP changes.";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return retmsg;
+        }
+
+        public string deleteCharacter(string charactername)
+        {
+            string retmsg = null;
+            string verifyChar = getUserIdFromCharacterName(charactername);
+            if (String.IsNullOrEmpty(verifyChar))
+            {
+                return "That is not a valid character name!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE CharacterInfo SET Status=1 WHERE Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", charactername);
+                    oCmd.Parameters.AddWithValue("@fStatus", 0);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                retmsg = "The character " + charactername + " has been deleted.";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return retmsg;
+        }
+
         public string resetSecondary(string playername)
         {
-            string retmsg = "is _not_ banned.";
+            string retmsg = null;
             string characterName = getUserIdFromCharacterName(playername);
             string accountName = null;
             if (!string.IsNullOrEmpty(characterName))
