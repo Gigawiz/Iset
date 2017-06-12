@@ -260,13 +260,17 @@ namespace Iset
             //
             _client.ExecuteAndWait(async () =>
             {
-                await _client.Connect("MzIzMzcyNTA1MzAzNzQ0NTEy.DB6LoQ.6_unUpseBhyeT13D-iBxpm1oyHg", TokenType.Bot);
+                await _client.Connect(ini.IniReadValue("discord", "bot-token"), TokenType.Bot);
             });
         }
 
         public void setupConfigBase()
         {
             IniFile inidefault = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "bot-token")))
+            {
+                inidefault.IniWriteValue("discord", "bot-token", "enter your bot token here!");
+            }
             if (String.IsNullOrEmpty(ini.IniReadValue("botconfig", "allowedgroups")))
             {
                 inidefault.IniWriteValue("botconfig", "allowedgroups", "000000000000000001,000000000000000002");
@@ -274,18 +278,18 @@ namespace Iset
                 {
                     inidefault.IniWriteValue("permissions", group, "online,banlist,soaps,checkban,reset2ndary,ban,unban,getaccountid,getloginuser,findalts");
                 }
-                if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "username")))
-                {
-                    inidefault.IniWriteValue("mssql", "username", "sa");
-                }
-                if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "password")))
-                {
-                    inidefault.IniWriteValue("mssql", "password", "yourpasswordhere");
-                }
-                if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "ipandport")))
-                {
-                    inidefault.IniWriteValue("mssql", "ipandport", "127.0.0.1,1433");
-                }
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "username")))
+            {
+                inidefault.IniWriteValue("mssql", "username", "sa");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "password")))
+            {
+                inidefault.IniWriteValue("mssql", "password", "yourpasswordhere");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("mssql", "ipandport")))
+            {
+                inidefault.IniWriteValue("mssql", "ipandport", "127.0.0.1,1433");
             }
         }
 
