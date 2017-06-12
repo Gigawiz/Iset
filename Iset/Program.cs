@@ -413,7 +413,7 @@ namespace Iset
             {
                 using (conn = new SqlConnection())
                 {
-                    conn.ConnectionString = "Server=192.151.151.5,1433; Database=heroesShare; User Id=sa; password=2k5Z*JPjL^%LAb_s";
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
                     string oString = "DELETE FROM ChannelBuff";
                     SqlCommand oCmd = new SqlCommand(oString, conn);
                     conn.Open();
