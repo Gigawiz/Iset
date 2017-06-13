@@ -20,33 +20,26 @@ namespace Iset
         {
             setupConfigBase();
             _client = new DiscordClient();
-
+            char cmd = '!';
+            HelpMode hlpmode = HelpMode.Disabled;
+            bool AllowMentionPrefix = false;
+            if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "PrefixChar")))
+            {
+                cmd = Convert.ToChar(ini.IniReadValue("discord", "PrefixChar"));
+            }
+            if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "HelpMode")))
+            {
+                hlpmode = getHlpMode(ini.IniReadValue("discord", "HelpMode"));
+            }
+            if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "AllowMentionPrefix")))
+            {
+                bool.TryParse(ini.IniReadValue("discord", "AllowMentionPrefix"), out AllowMentionPrefix);
+            }
             _client.UsingCommands(x =>
             {
-                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "PrefixChar")))
-                {
-                    x.PrefixChar = Convert.ToChar(ini.IniReadValue("discord", "PrefixChar"));
-                }
-                else
-                {
-                    x.PrefixChar = '!';
-                }
-                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "HelpMode")))
-                {
-                    x.HelpMode = getHlpMode(ini.IniReadValue("discord", "HelpMode"));
-                }
-                else
-                {
-                    x.HelpMode = HelpMode.Disabled;
-                }
-                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "AllowMentionPrefix")))
-                {
-                    x.AllowMentionPrefix = false;
-                }
-                else
-                {
-                    x.AllowMentionPrefix = true;
-                }
+                x.PrefixChar = cmd;
+                x.HelpMode = hlpmode;
+                x.AllowMentionPrefix = AllowMentionPrefix;
             });
 
             //this is used to read ALL text chat, not just commands with the prefix
@@ -158,6 +151,29 @@ namespace Iset
                       }
                       await e.Channel.SendMessage(setCharLevel(e.GetArg("username"), newlevel));
                   });
+            _client.GetService<CommandService>().CreateCommand("changename") //create command greet
+                  .Description("set the level of a character") //add description, it will be shown when ~help is used
+                  .Parameter("oldname", ParameterType.Required)
+                  .Parameter("newname", ParameterType.Required)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "changename"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("oldname")))
+                      {
+                          await e.Channel.SendMessage("Invalid Current Player Name.");
+                          return;
+                      }
+                      if (!checkValidInput(e.GetArg("newname")))
+                      {
+                          await e.Channel.SendMessage("Invalid New Player Name.");
+                          return;
+                      }
+                      await e.Channel.SendMessage(changeUserName(e.GetArg("oldname"), e.GetArg("newname")));
+                  });
             _client.GetService<CommandService>().CreateCommand("spawnitem") //create command greet
       .Description("Send an item to the defined players mailbox.") //add description, it will be shown when ~help is used
       .Parameter("charactername", ParameterType.Required)
@@ -190,6 +206,34 @@ namespace Iset
               }
           }
       });
+
+            _client.GetService<CommandService>().CreateCommand("spawnforall") //create command greet
+.Description("Send an item to the all online players.") //add description, it will be shown when ~help is used
+.Parameter("count", ParameterType.Required)
+.Parameter("itemtospawn", ParameterType.Optional)
+//.Parameter("message", ParameterType.Optional)
+.Do(async e =>
+{
+          //SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
+          if (!checkPerms(e.User, "spawnforall"))
+    {
+        await e.Channel.SendMessage("You do not have permission to use this command!");
+        return;
+    }
+    int count = 1;
+    if (!String.IsNullOrEmpty(e.GetArg("count")))
+    {
+        if (!int.TryParse(e.GetArg("count"), out count))
+        {
+            await e.Channel.SendMessage(SendMailToAllOnline(e.GetArg("count"), 1, e.User.Name));
+        }
+        else
+        {
+            await e.Channel.SendMessage(SendMailToAllOnline(e.GetArg("itemtospawn"), count, e.User.Name));
+        }
+    }
+});
+            //SendMailToAllOnline(string itemtospawn, int count, string mailsender)
             _client.GetService<CommandService>().CreateCommand("giveap") //create command greet
                   .Description("give ap to a character") //add description, it will be shown when ~help is used
                   .Parameter("username", ParameterType.Required)
@@ -473,6 +517,49 @@ namespace Iset
 
         }
 
+        public string SendMailToAllOnline(string itemtospawn, int count, string mailsender)
+        {
+            List<string> mailRecepients = onlinePlayers();
+            string mailTo = null;
+            int i = 0;
+            try
+            {
+                foreach (string user in mailRecepients)
+                {
+                    string mailReciever = getCharacterIdFromName(user);
+                    using (conn = new SqlConnection())
+                    {
+                        conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                        string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
+                        SqlCommand oCmd = new SqlCommand(oString, conn);
+                        oCmd.Parameters.AddWithValue("@CID", mailReciever);
+                        oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
+                        oCmd.Parameters.AddWithValue("@Count", count);
+                        oCmd.Parameters.AddWithValue("@MailContent", "Here is the item you requested from " + mailsender);
+                        oCmd.Parameters.AddWithValue("@MailTitle", "From Iset and " + mailsender);
+                        conn.Open();
+                        oCmd.ExecuteNonQuery();
+                        conn.Close();
+                    }
+                    if (i==0)
+                    {
+                        mailTo = user;
+                    }
+                    else
+                    {
+                        mailTo = mailTo + ", " + user;
+                    }
+                    i++;
+                }
+
+                return "The items have been sent to " + mailTo + "! They will need to relog or run a quest to see the mail!";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
         public string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
         {
             string characterId = getCharacterIdFromName(charactername);
@@ -734,6 +821,36 @@ namespace Iset
                     conn.Close();
                 }
                 retmsg = "The character " + charactername + " has been deleted.";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return retmsg;
+        }
+
+        public string changeUserName(string currentname, string newname)
+        {
+            string retmsg = null;
+            string verifyChar = getUserIdFromCharacterName(currentname);
+            if (String.IsNullOrEmpty(verifyChar))
+            {
+                return "That is not a valid character name!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE CharacterInfo SET Name=@fNewName WHERE Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", currentname);
+                    oCmd.Parameters.AddWithValue("@fNewName", newname);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                retmsg = "Character Name \"" + currentname + "\" has been changed to '" + newname + "'!";
             }
             catch (Exception ex)
             {
