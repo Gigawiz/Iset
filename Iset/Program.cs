@@ -23,10 +23,30 @@ namespace Iset
 
             _client.UsingCommands(x =>
             {
-                x.PrefixChar = Convert.ToChar(ini.IniReadValue("discord", "command-prefix"));
-                //x.PrefixChar = '$';
-                x.HelpMode = HelpMode.Private;
-                x.AllowMentionPrefix = true;
+                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "PrefixChar")))
+                {
+                    x.PrefixChar = Convert.ToChar(ini.IniReadValue("discord", "PrefixChar"));
+                }
+                else
+                {
+                    x.PrefixChar = '!';
+                }
+                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "HelpMode")))
+                {
+                    x.HelpMode = getHlpMode(ini.IniReadValue("discord", "HelpMode"));
+                }
+                else
+                {
+                    x.HelpMode = HelpMode.Disabled;
+                }
+                if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "AllowMentionPrefix")))
+                {
+                    x.AllowMentionPrefix = false;
+                }
+                else
+                {
+                    x.AllowMentionPrefix = true;
+                }
             });
 
             //this is used to read ALL text chat, not just commands with the prefix
@@ -403,9 +423,17 @@ namespace Iset
             {
                 inidefault.IniWriteValue("discord", "bot-token", "enter your bot token here!");
             }
-            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "command-prefix")))
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "PrefixChar")))
             {
-                inidefault.IniWriteValue("discord", "command-prefix", "!");
+                inidefault.IniWriteValue("discord", "PrefixChar", "!");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "HelpMode")))
+            {
+                inidefault.IniWriteValue("discord", "HelpMode", "public");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "AllowMentionPrefix")))
+            {
+                inidefault.IniWriteValue("discord", "HelpMode", "true");
             }
             if (String.IsNullOrEmpty(ini.IniReadValue("botconfig", "allowedgroups")))
             {
@@ -427,6 +455,22 @@ namespace Iset
             {
                 inidefault.IniWriteValue("mssql", "ipandport", "127.0.0.1,1433");
             }
+        }
+
+        public HelpMode getHlpMode(string mode)
+        {
+            switch (mode)
+            {
+                case "disabled":
+                    return HelpMode.Disabled;
+                case "private":
+                    return HelpMode.Private;
+                case "public":
+                    return HelpMode.Public;
+                default:
+                    return HelpMode.Disabled;
+            }
+
         }
 
         public string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
