@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Data.SqlClient;
 using System.Data;
+using System.Text.RegularExpressions;
 
 namespace Iset
 {
@@ -16,6 +17,7 @@ namespace Iset
         SqlConnection conn;
         private DiscordClient _client;
         IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
+        bool customHelpCommand = false;
         public void Start()
         {
             setupConfigBase();
@@ -29,6 +31,7 @@ namespace Iset
             }
             if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "HelpMode")))
             {
+                customHelpCommand = true;
                 hlpmode = getHlpMode(ini.IniReadValue("discord", "HelpMode"));
             }
             if (!String.IsNullOrEmpty(ini.IniReadValue("discord", "AllowMentionPrefix")))
@@ -50,6 +53,21 @@ namespace Iset
                     await e.Channel.SendMessage("you said something that wasnt a command");
                 }
             };*/
+            if (customHelpCommand)
+            {
+                _client.GetService<CommandService>().CreateCommand("help") //create command greet
+                                   .Description("lists commands you can access") //add description, it will be shown when ~help is used
+                                   .Do(async e =>
+                                   {
+                                       if (!checkPerms(e.User, "help"))
+                                       {
+                                           await e.Channel.SendMessage("You do not have permission to use this command!");
+                                           return;
+                                       }
+                                       await e.Channel.SendMessage("coming soon");
+                                       LogItem(e.User.Name + " has used the help command.");
+                                   });
+            }
             _client.GetService<CommandService>().CreateCommand("soaps") //create command greet
                    .Description("clears broken soaps") //add description, it will be shown when ~help is used
                    .Do(async e =>
@@ -60,6 +78,7 @@ namespace Iset
                            return;
                        }
                        await e.Channel.SendMessage(clearSoaps());
+                       LogItem(e.User.Name + " has cleared bath soaps");
                    });
             _client.GetService<CommandService>().CreateCommand("clearqueue") //create command greet
                    .Description("clears item queue") //add description, it will be shown when ~help is used
@@ -71,6 +90,7 @@ namespace Iset
                            return;
                        }
                        await e.Channel.SendMessage(clearQueue());
+                       LogItem(e.User.Name + " has cleared the item queue");
                    });
             _client.GetService<CommandService>().CreateCommand("checkban") //create command greet
                    .Description("checks if a player is banned") //add description, it will be shown when ~help is used
@@ -89,6 +109,7 @@ namespace Iset
                        }
                        string msg = "The user " + e.GetArg("username") + " " + isBanned(e.GetArg("username"));
                        await e.Channel.SendMessage(msg);
+                       LogItem(e.User.Name + " checked if user " + e.GetArg("username") + " was banned");
                    });
             _client.GetService<CommandService>().CreateCommand("restorechar") //create command greet
                   .Description("restores a deleted character") //add description, it will be shown when ~help is used
@@ -106,6 +127,7 @@ namespace Iset
                           return;
                       }
                       await e.Channel.SendMessage(restoreDeletedCharacter(e.GetArg("username")));
+                      LogItem(e.User.Name + " has restored character " + e.GetArg("username"));
                   });
             _client.GetService<CommandService>().CreateCommand("deletechar") //create command greet
                   .Description("delete a character") //add description, it will be shown when ~help is used
@@ -123,6 +145,7 @@ namespace Iset
                           return;
                       }
                       await e.Channel.SendMessage(deleteCharacter(e.GetArg("username")));
+                      LogItem(e.User.Name + " has deleted character " + e.GetArg("username")); 
                   });
             _client.GetService<CommandService>().CreateCommand("setlevel") //create command greet
                   .Description("set the level of a character") //add description, it will be shown when ~help is used
@@ -150,6 +173,7 @@ namespace Iset
                           }
                       }
                       await e.Channel.SendMessage(setCharLevel(e.GetArg("username"), newlevel));
+                      LogItem(e.User.Name + " has set " + e.GetArg("username") + "'s level to " + newlevel.ToString());
                   });
             _client.GetService<CommandService>().CreateCommand("changename") //create command greet
                   .Description("set the level of a character") //add description, it will be shown when ~help is used
@@ -173,6 +197,52 @@ namespace Iset
                           return;
                       }
                       await e.Channel.SendMessage(changeUserName(e.GetArg("oldname"), e.GetArg("newname")));
+                      LogItem(e.User.Name + " has changed the character name of \"" + e.GetArg("oldname") + "\" to " + e.GetArg("newname"));
+                  });
+            _client.GetService<CommandService>().CreateCommand("whoami") //create command greet
+                  .Description("set the level of a character") //add description, it will be shown when ~help is used
+                  .Parameter("username", ParameterType.Optional)
+                  .Do(async e =>
+                  {
+                      if (!checkPerms(e.User, "whoami"))
+                      {
+                          await e.Channel.SendMessage("You do not have permission to use this command!");
+                          return;
+                      }
+                      User user = e.User;
+                      List<User> users = new List<User>();
+                      string beginningText = "You are ";
+                      if (!string.IsNullOrEmpty(e.GetArg("username")))
+                      {
+                          users = e.Message.MentionedUsers.ToList();
+                          user = users[0];
+                          beginningText = "They are ";
+                      }
+                      Regex rgx = new Regex("[^a-zA-Z0-9 -]");
+                      string cleanedUserName = rgx.Replace(user.Name, "");
+                      string cleanedUserNick = rgx.Replace(user.Nickname, "");
+                      List<string> possibleAlts = findPossibleAlts(cleanedUserName, cleanedUserNick);
+                      if (possibleAlts.Count == 0 || possibleAlts == null)
+                      {
+                          await e.Channel.SendMessage(beginningText + user.Name + ". There were no characters or accounts found associated with this discord user name.");
+                      }
+                      else
+                      {
+                          string altsfound = null;
+                          foreach (string character in possibleAlts)
+                          {
+                              if (altsfound == null)
+                              {
+                                  altsfound = character;
+                              }
+                              else
+                              {
+                                  altsfound = altsfound + ", " + character;
+                              }
+                          }
+                          await e.Channel.SendMessage(beginningText + user.Name + ". There were " + possibleAlts.Count.ToString() + " possible characters found associated with this discord user name. Possible Alts Found: " + Environment.NewLine + altsfound);
+                      }
+                      LogItem(e.User.Name + " has run the command 'whoami' against user " + cleanedUserName);
                   });
             _client.GetService<CommandService>().CreateCommand("spawnitem") //create command greet
       .Description("Send an item to the defined players mailbox.") //add description, it will be shown when ~help is used
@@ -199,10 +269,12 @@ namespace Iset
               if (!int.TryParse(e.GetArg("count"), out count))
               {
                   await e.Channel.SendMessage(SendMail(e.GetArg("charactername"), e.GetArg("count"), 1, "", e.User.Name));
+                  LogItem(e.User.Name + " has spawned one " + e.GetArg("count") + " for player " + e.GetArg("charactername"));
               }
               else
               {
                   await e.Channel.SendMessage(SendMail(e.GetArg("charactername"), e.GetArg("itemtospawn"), count, "", e.User.Name));
+                  LogItem(e.User.Name + " has spawned " + count.ToString() + " " + e.GetArg("itemtospawn") + " for player " + e.GetArg("charactername"));
               }
           }
       });
@@ -226,10 +298,12 @@ namespace Iset
         if (!int.TryParse(e.GetArg("count"), out count))
         {
             await e.Channel.SendMessage(SendMailToAllOnline(e.GetArg("count"), 1, e.User.Name));
+            LogItem(e.User.Name + " has spawned one " + e.GetArg("count") + " for all online players");
         }
         else
         {
             await e.Channel.SendMessage(SendMailToAllOnline(e.GetArg("itemtospawn"), count, e.User.Name));
+            LogItem(e.User.Name + " has spawned " + count.ToString() + e.GetArg("itemtospawn") + " for all online players");
         }
     }
 });
@@ -260,6 +334,7 @@ namespace Iset
                           }
                       }
                       await e.Channel.SendMessage(giveApToChar(e.GetArg("username"), amount));
+                      LogItem(e.User.Name + " has given " + e.GetArg("username") + " " + amount.ToString() + " AP.");
                   });
             _client.GetService<CommandService>().CreateCommand("getaccountid") //create command greet
        .Description("get the account id for a character") //add description, it will be shown when ~help is used
@@ -277,6 +352,7 @@ namespace Iset
                return;
            }
            await e.Channel.SendMessage(getUserIdFromCharacterName(e.GetArg("username")));
+           LogItem(e.User.Name + " has retrieved the user id for " + e.GetArg("username"));
        });
        _client.GetService<CommandService>().CreateCommand("getloginuser") //create command greet
        .Description("get the login string for a character") //add description, it will be shown when ~help is used
@@ -297,6 +373,7 @@ namespace Iset
            if (!string.IsNullOrEmpty(charid))
            {
                await e.Channel.SendMessage(getAccountNameFromID(charid));
+               LogItem(e.User.Name + " has retrieved the account login name for " + e.GetArg("username"));
            }
            else
            {
@@ -320,6 +397,7 @@ namespace Iset
                        }
                        string msg = resetSecondary(e.GetArg("username"));
                        await e.Channel.SendMessage(msg);
+                       LogItem(e.User.Name + " has reset the secondary password of " + e.GetArg("username"));
                    });
             _client.GetService<CommandService>().CreateCommand("ban") //create command greet
                    .Description("ban a player in game") //add description, it will be shown when ~help is used
@@ -347,6 +425,7 @@ namespace Iset
                            banResult = BanUser(e.GetArg("username"));
                        }
                        await e.Channel.SendMessage(banResult);
+                       LogItem(e.User.Name + " has banned " + e.GetArg("username") + " for reason: " + e.GetArg("reason"));
                    });
             _client.GetService<CommandService>().CreateCommand("unban") //create command greet
        .Description("ban a player in game") //add description, it will be shown when ~help is used
@@ -365,6 +444,7 @@ namespace Iset
            }
            string banResult = unbanUser(e.GetArg("username"));
            await e.Channel.SendMessage(banResult);
+           LogItem(e.User.Name + " has unbanned " +e.GetArg("username"));
        });
             _client.GetService<CommandService>().CreateCommand("online") //create command greet
        .Description("Lists online players with usernames") //add description, it will be shown when ~help is used
@@ -399,6 +479,7 @@ namespace Iset
            {
                await e.Channel.SendMessage("Players Online: " + players.Count().ToString() + " at time: " + DateTime.Now);
            }
+           LogItem(e.User.Name + " has listed online players.");
        });
             _client.GetService<CommandService>().CreateCommand("banlist") //create command greet
        .Description("Lists banned player usernames") //add description, it will be shown when ~help is used
@@ -425,6 +506,7 @@ namespace Iset
                    i++;
                }
                await e.Channel.SendMessage("Total Players Banned: " + players.Count().ToString() + " as of: " + DateTime.Now + Environment.NewLine + playernames);
+           LogItem(e.User.Name + " has viewed the banlist.");
        });
             _client.GetService<CommandService>().CreateCommand("findalts") //create command greet
 .Description("Lists alts of the specified character") //add description, it will be shown when ~help is used
@@ -452,6 +534,7 @@ namespace Iset
         i++;
     }
     await e.Channel.SendMessage("Total characters found: " + players.Count().ToString() + " as of: " + DateTime.Now + Environment.NewLine + playernames);
+    LogItem(e.User.Name + " has searched for the alts of " + e.GetArg("charactername"));
 });
             //
             _client.ExecuteAndWait(async () =>
@@ -499,6 +582,22 @@ namespace Iset
             {
                 inidefault.IniWriteValue("mssql", "ipandport", "127.0.0.1,1433");
             }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("logs", "logtofile")))
+            {
+                inidefault.IniWriteValue("logs", "logtofile", "true");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("logs", "logtoconsole")))
+            {
+                inidefault.IniWriteValue("logs", "logtoconsole", "true");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("logs", "logToDiscordChannel")))
+            {
+                inidefault.IniWriteValue("logs", "logToDiscordChannel", "false");
+            }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("logs", "logchannelid")))
+            {
+                inidefault.IniWriteValue("logs", "logchannelid", "channel id that iset should log to");
+            }
         }
 
         public HelpMode getHlpMode(string mode)
@@ -511,6 +610,9 @@ namespace Iset
                     return HelpMode.Private;
                 case "public":
                     return HelpMode.Public;
+                case "custom":
+                    customHelpCommand = true;
+                    return HelpMode.Disabled;
                 default:
                     return HelpMode.Disabled;
             }
@@ -610,6 +712,13 @@ namespace Iset
                     }
                 }
             }
+            string logItem = "Error: Insufficient Permissions - " + discordUser.Name;
+            if (!string.IsNullOrEmpty(discordUser.Nickname))
+            {
+                logItem = logItem + " (" + discordUser.Nickname + ")";
+            }
+            logItem = logItem + " has attempted to use the command \"" + command + "\".";
+            LogItem(logItem);
             return false;
         }
         public string clearQueue()
@@ -1167,6 +1276,83 @@ namespace Iset
             return characterNames;
         }
 
+        public List<string> findPossibleAlts(string discordName, string discordNickname)
+        {
+            List<string> characterNames = new List<string>();
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT * FROM CharacterInfo WHERE UPPER(Name) LIKE @fName OR UPPER(Name) LIKE @fNick";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", '%' + discordName.ToUpper() + '%');
+                    oCmd.Parameters.AddWithValue("@fNick", '%' + discordNickname.ToUpper() + '%');
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            characterNames.Add(oReader["Name"].ToString());
+                        }
+                        conn.Close();
+                    }
+                }
+                Console.WriteLine("Found characters. Checking Accounts.");
+                List<string> accountIds = new List<string>();
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT * FROM [User] WHERE UPPER(Name) LIKE @fName OR UPPER(Name) LIKE @fNick";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", "%" + discordName.ToUpper() + "%");
+                    oCmd.Parameters.AddWithValue("@fNick", '%' + discordNickname.ToUpper() + '%');
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            accountIds.Add(oReader["ID"].ToString());
+                        }
+                        conn.Close();
+                    }
+                }
+                Console.WriteLine("Found "+accountIds.Count() + " accounts.");
+                if (accountIds.Count() > 0)
+                {
+                    foreach (string accountId in accountIds)
+                    {
+                        using (conn = new SqlConnection())
+                        {
+                            conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                            string oString = "SELECT * FROM CharacterInfo WHERE UID=@fName";
+                            SqlCommand oCmd = new SqlCommand(oString, conn);
+                            oCmd.Parameters.AddWithValue("@fName", accountId);
+                            conn.Open();
+                            using (SqlDataReader oReader = oCmd.ExecuteReader())
+                            {
+                                while (oReader.Read())
+                                {
+                                    if (!characterNames.Contains(oReader["Name"].ToString()))
+                                    {
+                                        characterNames.Add(oReader["Name"].ToString());
+                                    }
+                                }
+                                conn.Close();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                characterNames.Add("Error in query!");
+                characterNames.Add(ex.Message);
+            }
+            return characterNames;
+        }
+
+
         public List<string> bannedPlayers()
         {
             List<string> onlineNames = new List<string>();
@@ -1194,6 +1380,38 @@ namespace Iset
                 onlineNames.Add(ex.Message);
             }
             return onlineNames;
+        }
+
+        public void LogItem(string logStr)
+        {
+            string currentTime = DateTime.Now.ToString();
+            string currentDate = DateTime.Now.ToString("dd.MM.yyy");
+            bool logToFile = true;
+            bool logtoConsole = true;
+            bool logToDiscordChannel = true;
+            ulong channelId = 0;
+            ulong.TryParse(ini.IniReadValue("logs", "logchannelid"), out channelId);
+            bool.TryParse(ini.IniReadValue("logs", "logtofile"), out logToFile);
+            bool.TryParse(ini.IniReadValue("logs", "logtoconsole"), out logtoConsole);
+            bool.TryParse(ini.IniReadValue("logs", "logToDiscordChannel"), out logtoConsole);
+            string logEntry = currentTime + ": " + logStr;
+            if (logToFile)
+            {
+                if (!Directory.Exists(Directory.GetCurrentDirectory() + @"\logs"))
+                {
+                    Directory.CreateDirectory(Directory.GetCurrentDirectory() + @"\logs");
+                }
+                File.AppendAllText(Directory.GetCurrentDirectory() + @"\logs\" + currentDate + ".txt", logEntry + Environment.NewLine);
+            }
+            if (logtoConsole)
+            {
+                Console.WriteLine(logEntry);
+            }
+            if (logToDiscordChannel && channelId > 0)
+            {
+                Channel logTo = _client.GetChannel(channelId);
+                logTo.SendMessage(logEntry);
+            }
         }
     }
 }
