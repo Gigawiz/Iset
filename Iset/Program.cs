@@ -23,7 +23,8 @@ namespace Iset
 
             _client.UsingCommands(x =>
             {
-                x.PrefixChar = '!';
+                x.PrefixChar = Convert.ToChar(ini.IniReadValue("discord", "command-prefix"));
+                //x.PrefixChar = '$';
                 x.HelpMode = HelpMode.Private;
                 x.AllowMentionPrefix = true;
             });
@@ -46,6 +47,17 @@ namespace Iset
                            return;
                        }
                        await e.Channel.SendMessage(clearSoaps());
+                   });
+            _client.GetService<CommandService>().CreateCommand("clearqueue") //create command greet
+                   .Description("clears item queue") //add description, it will be shown when ~help is used
+                   .Do(async e =>
+                   {
+                       if (!checkPerms(e.User, "clearqueue"))
+                       {
+                           await e.Channel.SendMessage("You do not have permission to use this command!");
+                           return;
+                       }
+                       await e.Channel.SendMessage(clearQueue());
                    });
             _client.GetService<CommandService>().CreateCommand("checkban") //create command greet
                    .Description("checks if a player is banned") //add description, it will be shown when ~help is used
@@ -126,6 +138,38 @@ namespace Iset
                       }
                       await e.Channel.SendMessage(setCharLevel(e.GetArg("username"), newlevel));
                   });
+            _client.GetService<CommandService>().CreateCommand("spawnitem") //create command greet
+      .Description("Send an item to the defined players mailbox.") //add description, it will be shown when ~help is used
+      .Parameter("charactername", ParameterType.Required)
+      .Parameter("count", ParameterType.Required)
+      .Parameter("itemtospawn", ParameterType.Optional)
+      //.Parameter("message", ParameterType.Optional)
+      .Do(async e =>
+      {
+          //SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
+          if (!checkPerms(e.User, "spawnitem"))
+          {
+              await e.Channel.SendMessage("You do not have permission to use this command!");
+              return;
+          }
+         if (!checkValidInput(e.GetArg("charactername")))
+          {
+              await e.Channel.SendMessage("Invalid Data.");
+              return;
+          }
+          int count = 1;
+          if (!String.IsNullOrEmpty(e.GetArg("count")))
+          {
+              if (!int.TryParse(e.GetArg("count"), out count))
+              {
+                  await e.Channel.SendMessage(SendMail(e.GetArg("charactername"), e.GetArg("count"), 1, "", e.User.Name));
+              }
+              else
+              {
+                  await e.Channel.SendMessage(SendMail(e.GetArg("charactername"), e.GetArg("itemtospawn"), count, "", e.User.Name));
+              }
+          }
+      });
             _client.GetService<CommandService>().CreateCommand("giveap") //create command greet
                   .Description("give ap to a character") //add description, it will be shown when ~help is used
                   .Parameter("username", ParameterType.Required)
@@ -359,6 +403,10 @@ namespace Iset
             {
                 inidefault.IniWriteValue("discord", "bot-token", "enter your bot token here!");
             }
+            if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "command-prefix")))
+            {
+                inidefault.IniWriteValue("discord", "command-prefix", "!");
+            }
             if (String.IsNullOrEmpty(ini.IniReadValue("botconfig", "allowedgroups")))
             {
                 inidefault.IniWriteValue("botconfig", "allowedgroups", "000000000000000001,000000000000000002");
@@ -379,6 +427,33 @@ namespace Iset
             {
                 inidefault.IniWriteValue("mssql", "ipandport", "127.0.0.1,1433");
             }
+        }
+
+        public string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
+        {
+            string characterId = getCharacterIdFromName(charactername);
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@CID", characterId);
+                    oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
+                    oCmd.Parameters.AddWithValue("@Count", count);
+                    oCmd.Parameters.AddWithValue("@MailContent", "Here is the item you requested from " +mailsender);
+                    oCmd.Parameters.AddWithValue("@MailTitle", "From Iset and "+ mailsender);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                    return "The item has been sent to " + charactername + "! They will need to relog or run a quest to see the mail!";
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            } 
         }
 
         public bool checkPerms(User discordUser, string command)
@@ -405,6 +480,26 @@ namespace Iset
                 }
             }
             return false;
+        }
+        public string clearQueue()
+        {
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "DELETE FROM QueuedItem";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                    return "Queue has been cleared!";
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         public string clearSoaps()
@@ -494,10 +589,11 @@ namespace Iset
                 using (conn = new SqlConnection())
                 {
                     conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "UPDATE CharacterInfo SET Status=0 WHERE Name=@fName";
+                    string oString = "UPDATE CharacterInfo SET Status=@fStatus, DeleteTime=@fDeleteTime WHERE Name=@fName";
                     SqlCommand oCmd = new SqlCommand(oString, conn);
                     oCmd.Parameters.AddWithValue("@fName", charactername);
                     oCmd.Parameters.AddWithValue("@fStatus", 0);
+                    oCmd.Parameters.AddWithValue("@fDeleteTime", DBNull.Value);
                     conn.Open();
                     oCmd.ExecuteNonQuery();
                     conn.Close();
@@ -585,7 +681,7 @@ namespace Iset
                 using (conn = new SqlConnection())
                 {
                     conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "UPDATE CharacterInfo SET Status=1 WHERE Name=@fName";
+                    string oString = "UPDATE CharacterInfo SET Status=1, DeleteTime=CURRENT_TIMESTAMP WHERE Name=@fName";
                     SqlCommand oCmd = new SqlCommand(oString, conn);
                     oCmd.Parameters.AddWithValue("@fName", charactername);
                     oCmd.Parameters.AddWithValue("@fStatus", 0);
@@ -735,7 +831,39 @@ namespace Iset
             }
             return userid;
         }
-        
+
+        public string getCharacterIdFromName(string characterName)
+        {
+            string userid = null;
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "Select * from CharacterInfo where Name=@fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", characterName);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (!string.IsNullOrEmpty(oReader["UID"].ToString()))
+                            {
+                                userid = oReader["ID"].ToString();
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return userid;
+        }
+
         public string getUserIdFromCharacterName(string characterName)
         {
             string userid = null;
