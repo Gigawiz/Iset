@@ -433,7 +433,7 @@ namespace Iset
             }
             if (String.IsNullOrEmpty(inidefault.IniReadValue("discord", "AllowMentionPrefix")))
             {
-                inidefault.IniWriteValue("discord", "HelpMode", "true");
+                inidefault.IniWriteValue("discord", "AllowMentionPrefix", "true");
             }
             if (String.IsNullOrEmpty(ini.IniReadValue("botconfig", "allowedgroups")))
             {
