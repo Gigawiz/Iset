@@ -51,9 +51,9 @@ namespace Iset
         /// <returns></returns>
         public string IniReadValue(string Section, string Key)
         {
-            StringBuilder temp = new StringBuilder(255);
+            StringBuilder temp = new StringBuilder(5000);
             int i = GetPrivateProfileString(Section, Key, "", temp,
-                                            255, this.path);
+                                            5000, this.path);
             return temp.ToString();
 
         }
