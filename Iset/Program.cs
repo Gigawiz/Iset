@@ -54,7 +54,7 @@ namespace Iset
             //this is used to read ALL text chat, not just commands with the prefix
             _client.MessageReceived += async (s, e) =>
             {
-                if (!e.Message.IsAuthor && e.Message.RawText.Contains("(╯°□°）╯︵ ┻━┻"))
+                if (!e.Message.IsAuthor && e.Message.RawText.Contains("(╯°□°）╯︵ ┻━┻") && checkPerms(e.User, "tableflip"))
                 {
                     await e.Channel.SendMessage("┬─┬﻿ ノ( ゜-゜ノ)");
                 }
@@ -271,6 +271,16 @@ namespace Iset
                 .Parameter("R", ParameterType.Optional)
                 .Parameter("G", ParameterType.Optional)
                 .Parameter("B", ParameterType.Optional)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("dye")
+                .Parameter("charactername", ParameterType.Required)
+                .Parameter("itemcode", ParameterType.Required)
+                .Parameter("slot1", ParameterType.Required)
+                .Parameter("slot2", ParameterType.Required)
+                .Parameter("slot3", ParameterType.Required)
                 .Do(async e =>
                 {
                     await processCommand(e);
@@ -770,6 +780,10 @@ namespace Iset
                     //!restoreweapon <charactername> <enhancement level> <weapon type> [quality] [prefix] [suffix] [fusion]
                     //await e.Channel.SendMessage("test");
                     await e.Channel.SendMessage(ItemFunctions.restoreItem(e.GetArg("charactername"), e.GetArg("enhancementlevel"), e.GetArg("weapontype"), e.User.Nickname + "(" + e.User.Name + ")"));
+                    break;
+                case "dye":
+                    await e.Channel.SendMessage(ItemFunctions.dyeItem(e.GetArg("charactername"), e.GetArg("itemcode"), e.GetArg("slot1"), e.GetArg("slot2"), e.GetArg("slot3")));
+                    Logging.LogItem(e.User.Name + " has dyed " + e.GetArg("charactername") + "'s " + e.GetArg("itemcode") + " to colors: " + Environment.NewLine + "Slot 1: " + e.GetArg("slot1") + Environment.NewLine + "Slot 2: " + e.GetArg("slot2") + Environment.NewLine + "Slot 3: " + e.GetArg("slot3"));
                     break;
                 default:
                     await e.Channel.SendMessage("This command either does not exist, or is still in development.");

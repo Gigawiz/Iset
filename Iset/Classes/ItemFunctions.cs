@@ -14,6 +14,118 @@ namespace Iset
         static SqlConnection conn;
         static SQLiteConnection m_dbConnection;
         static IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
+
+        public static string findItemID (string characterID, string itemName)
+        {
+            string ret = null;
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT TOP 1 * FROM Item WHERE OwnerID = @fName AND ItemClass LIKE @fCode";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", characterID);
+                    oCmd.Parameters.AddWithValue("@fCode", "%" + itemName + "%");
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (!string.IsNullOrEmpty(oReader["ID"].ToString()))
+                            {
+                                 ret = oReader["ID"].ToString();
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                Logging.LogItem(ex.Message);
+            }
+            return ret;
+        }
+
+        public static string dyeItem(string charactername, string itemtoDye, string slot1, string slot2, string slot3)
+        {
+            string characterid = UserFunctions.getCharacterIdFromName(charactername);
+            if (string.IsNullOrEmpty(characterid))
+            {
+                return "Invalid Character Name!";
+            }
+            string itemID = findItemID(characterid, itemtoDye);
+            if (string.IsNullOrEmpty(itemID))
+            {
+                return "Invalid item name!";
+            }
+            int slt1 = 0;
+            int slt2 = 0;
+            int slt3 = 0;
+            if (!int.TryParse(slot1, out slt1))
+            {
+                return "Invalid Color given for slot 1!";
+            }
+            if (!int.TryParse(slot2, out slt2))
+            {
+                return "Invalid Color given for slot 2!";
+            }
+            if (!int.TryParse(slot3, out slt3))
+            {
+                return "Invalid Color given for slot 3!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "UPDATE Equippable SET";
+                    if (slt1 >= 0)
+                    {
+                        oString = oString + " Color1 = @fColor1";
+                    }
+                    if (slt2 >= 0)
+                    {
+                        if (slt1 >= 0)
+                            oString = oString + ",";
+
+                        oString = oString + " Color2 = @fColor2";
+                    }
+                    if (slt3 >= 0)
+                    {
+                        if (slt2 >= 0 || slt1 >= 0)
+                            oString = oString + ",";
+
+                        oString = oString + " Color3 = @fColor3";
+                    }
+                    oString = oString + " WHERE ID = @fName";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fName", itemID);
+                    if (slt1 >= 0)
+                    {
+                        oCmd.Parameters.AddWithValue("@fColor1", slt1);
+                    }
+                    if (slt2 >= 0)
+                    {
+                        oCmd.Parameters.AddWithValue("@fColor2", slt2);
+                    }
+                    if (slt3 >= 0)
+                    {
+                        oCmd.Parameters.AddWithValue("@fColor3", slt3);
+                    }
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+            }
+            catch (SqlException ex)
+            {
+                return ex.Message;
+            }
+            return "The item colors have been changed! " + charactername + " will need to re-equip the item to see the changes.";
+        }
+
         public static string clearQueue()
         {
             try
@@ -105,11 +217,7 @@ namespace Iset
             int.TryParse(ini.IniReadValue("misc", "maxitemrestoresperaccount"), out maxRestoredWeapons);
             if (restoredItems.Count() >= maxRestoredWeapons)
             {
-                string retstr = "An item has allready been restored for " + character + "! Previously Restored Item(s): " + Environment.NewLine;
-                foreach (string restore in restoredItems)
-                {
-                    retstr = retstr + "```" + restore + "```" + Environment.NewLine;
-                }
+                string retstr = "An item has allready been restored for " + character + "!";
                 return retstr;
             }
             string wepToRestore = null;
