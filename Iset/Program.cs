@@ -161,7 +161,7 @@ namespace Iset
                       await processCommand(e);
                   });
             
-            _client.GetService<CommandService>().CreateCommand("spawnitem") //create command greet
+            _client.GetService<CommandService>().CreateCommand("spawn") //create command greet
                   .Description("Send an item to the defined players mailbox.") //add description, it will be shown when ~help is used
                   .Parameter("charactername", ParameterType.Required)
                   .Parameter("count", ParameterType.Required)
@@ -171,17 +171,6 @@ namespace Iset
                   {
                       await processCommand(e);
                   });
-
-            _client.GetService<CommandService>().CreateCommand("spawnforall") //create command greet
-                .Description("Send an item to the all online players.") //add description, it will be shown when ~help is used
-                .Parameter("count", ParameterType.Required)
-                .Parameter("itemtospawn", ParameterType.Optional)
-                //.Parameter("message", ParameterType.Optional)
-                .Do(async e =>
-                {
-                    await processCommand(e);
-
-                });
             //SendMailToAllOnline(string itemtospawn, int count, string mailsender)
             _client.GetService<CommandService>().CreateCommand("giveap") //create command greet
                   .Description("give ap to a character") //add description, it will be shown when ~help is used
@@ -267,6 +256,14 @@ namespace Iset
               {
                   await processCommand(e);
               });
+            _client.GetService<CommandService>().CreateCommand("forcerestoreweapon") //create command greet
+             .Description("restore a weapon for a character") //add description, it will be shown when ~help is used
+             .Parameter("charactername", ParameterType.Required)
+             .Parameter("wepcode", ParameterType.Required)
+             .Do(async e =>
+             {
+                 await processCommand(e);
+             });
             _client.GetService<CommandService>().CreateCommand("rgb")
                 .Parameter("R", ParameterType.Optional)
                 .Parameter("G", ParameterType.Optional)
@@ -281,6 +278,20 @@ namespace Iset
                 .Parameter("slot1", ParameterType.Required)
                 .Parameter("slot2", ParameterType.Required)
                 .Parameter("slot3", ParameterType.Required)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("server")
+                .Parameter("command", ParameterType.Required)
+                .Parameter("othervars", ParameterType.Unparsed)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("rng")
+                .Parameter("rngcmd", ParameterType.Required)
+                .Parameter("playerstochoosefrom", ParameterType.Unparsed)
                 .Do(async e =>
                 {
                     await processCommand(e);
@@ -588,11 +599,29 @@ namespace Iset
                     await e.Channel.SendMessage(msg);
                     Logging.LogItem(e.User.Name + " checked if user " + e.GetArg("username") + " was banned");
                     break;
-                case "spawnitem":
+                case "spawn":
                     if (!checkValidInput(e.GetArg("charactername")))
                     {
                         await e.Channel.SendMessage("Invalid Data.");
                         return;
+                    }
+                    if (e.GetArg("charactername") == "all")
+                    {
+                        if (!checkPerms(e.User, "spawnall"))
+                        {
+                            await e.Channel.SendMessage("You do not have permission to use " + e.Command.Text + " for all players!");
+                            return;
+                        }
+                        int playerCount = UserFunctions.playerList("id", "all", true).Count();
+                        await e.Channel.SendMessage("Sending item(s) to " + playerCount.ToString() + " players. Please wait as this will take a long time for a large player base. I will remain un-responsive until all items have been set in the queue!");
+                    }
+                    if (e.GetArg("charactername") == "allonline")
+                    {
+                        if (!checkPerms(e.User, "spawnallonline"))
+                        {
+                            await e.Channel.SendMessage("You do not have permission to use " + e.Command.Text + " for all online players!");
+                            return;
+                        }
                     }
                     int count = 1;
                     if (!String.IsNullOrEmpty(e.GetArg("count")))
@@ -606,22 +635,6 @@ namespace Iset
                         {
                             await e.Channel.SendMessage(ItemFunctions.SendMail(e.GetArg("charactername"), e.GetArg("itemtospawn"), count, "Here is the item you requested from " + e.User.Name, "From Iset and " + e.User.Name));
                             Logging.LogItem(e.User.Name + " has spawned " + count.ToString() + " " + e.GetArg("itemtospawn") + " for player " + e.GetArg("charactername"));
-                        }
-                    }
-                    break;
-                case "spawnforall":
-                    int spawnallcount = 1;
-                    if (!String.IsNullOrEmpty(e.GetArg("count")))
-                    {
-                        if (!int.TryParse(e.GetArg("count"), out spawnallcount))
-                        {
-                            await e.Channel.SendMessage(ItemFunctions.SendMailToAllOnline(e.GetArg("count"), 1, e.User.Name));
-                            Logging.LogItem(e.User.Name + " has spawned one " + e.GetArg("count") + " for all online players");
-                        }
-                        else
-                        {
-                            await e.Channel.SendMessage(ItemFunctions.SendMailToAllOnline(e.GetArg("itemtospawn"), spawnallcount, e.User.Name));
-                            Logging.LogItem(e.User.Name + " has spawned " + spawnallcount.ToString() +" " + e.GetArg("itemtospawn") + " for all online players");
                         }
                     }
                     break;
@@ -777,13 +790,27 @@ namespace Iset
                     await e.Channel.SendMessage(MiscFunctions.colorConvert(e.GetArg("R"), e.GetArg("G"), e.GetArg("B")));
                     break;
                 case "restoreweapon":
-                    //!restoreweapon <charactername> <enhancement level> <weapon type> [quality] [prefix] [suffix] [fusion]
-                    //await e.Channel.SendMessage("test");
                     await e.Channel.SendMessage(ItemFunctions.restoreItem(e.GetArg("charactername"), e.GetArg("enhancementlevel"), e.GetArg("weapontype"), e.User.Nickname + "(" + e.User.Name + ")"));
+                    break;
+                case "forcerestoreweapon":
+                    await e.Channel.SendMessage(ItemFunctions.forceRestoreItem(e.GetArg("charactername"), e.GetArg("wepcode"), e.User.Nickname + "(" + e.User.Name + ")"));
                     break;
                 case "dye":
                     await e.Channel.SendMessage(ItemFunctions.dyeItem(e.GetArg("charactername"), e.GetArg("itemcode"), e.GetArg("slot1"), e.GetArg("slot2"), e.GetArg("slot3")));
                     Logging.LogItem(e.User.Name + " has dyed " + e.GetArg("charactername") + "'s " + e.GetArg("itemcode") + " to colors: " + Environment.NewLine + "Slot 1: " + e.GetArg("slot1") + Environment.NewLine + "Slot 2: " + e.GetArg("slot2") + Environment.NewLine + "Slot 3: " + e.GetArg("slot3"));
+                    break;
+                case "server":
+                    await e.Channel.SendMessage(ServerFunctions.parseServerAction(e.GetArg("command"), e.GetArg("othervars")));
+                    break;
+                case "rng":
+                    if (e.GetArg("rngcmd") == "randomplayer")
+                    {
+                        await e.Channel.SendMessage(EventFunctions.pickRandomPlayer(e.GetArg("playerstochoosefrom")));
+                    }
+                    else
+                    {
+                        await e.Channel.SendMessage("This command currently only works with the \"randomplayer\" paramater");
+                    }
                     break;
                 default:
                     await e.Channel.SendMessage("This command either does not exist, or is still in development.");

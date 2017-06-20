@@ -100,6 +100,50 @@ namespace Iset
             return characterNames;
         }
 
+        public static List<string> playerList(string returnDataType, string searchType = "online", bool skipStorageChars = false)
+        {
+            List<string> characterNames = new List<string>();
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT * FROM CharacterInfo WHERE Status = 0";
+                    if (searchType == "online")
+                    {
+                        oString = oString + " AND IsConnected=1";
+                    }
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (returnDataType == "id")
+                            {
+                                characterNames.Add(oReader["ID"].ToString());
+                            }
+                            else if (returnDataType == "name")
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
+                            else
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                characterNames.Add("Error in query!");
+                characterNames.Add(ex.Message);
+            }
+            return characterNames;
+        }
+
         public static List<string> findAlts(string charactername)
         {
             List<string> characterNames = new List<string>();
@@ -113,7 +157,7 @@ namespace Iset
                 using (conn = new SqlConnection())
                 {
                     conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "SELECT * FROM CharacterInfo WHERE UID=@fName";
+                    string oString = "SELECT * FROM CharacterInfo WHERE UID=@fName ORDER BY STATUS ASC";
                     SqlCommand oCmd = new SqlCommand(oString, conn);
                     oCmd.Parameters.AddWithValue("@fName", submittedCharacterAccID);
                     conn.Open();
@@ -121,7 +165,16 @@ namespace Iset
                     {
                         while (oReader.Read())
                         {
-                            characterNames.Add(oReader["Name"].ToString());
+                            int statusCode = 0;
+                            int.TryParse(oReader["Status"].ToString(), out statusCode);
+                            if (statusCode > 0)
+                            {
+                                characterNames.Add("~~" + oReader["Name"].ToString() + "~~");
+                            }
+                            else
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
                         }
                         conn.Close();
                     }
@@ -151,7 +204,7 @@ namespace Iset
                     {
                         while (oReader.Read())
                         {
-                            if (!string.IsNullOrEmpty(oReader["UID"].ToString()))
+                            if (!string.IsNullOrEmpty(oReader["ID"].ToString()))
                             {
                                 userid = oReader["ID"].ToString();
                             }

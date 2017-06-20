@@ -287,74 +287,100 @@ namespace Iset
             return "The weapon has been found and restored for " + character + "!";
         }
 
-        public static string SendMailToAllOnline(string itemtospawn, int count, string mailsender)
+        public static string forceRestoreItem(string character, string wepcode, string staff)
+        //!restoreweapon <charactername> <enhancement level> <weapon type> [quality] [prefix] [suffix] [fusion]
         {
-            List<string> mailRecepients = MiscFunctions.onlinePlayers();
-            string mailTo = null;
-            int i = 0;
+            string charid = UserFunctions.getCharacterIdFromName(character);
+            string accountId = UserFunctions.getUserIdFromCharacterName(character);
+            string accountName = UserFunctions.getAccountNameFromID(accountId);
+            if (string.IsNullOrEmpty(charid))
+            {
+                return "Invalid character name!";
+            }
+            List<string> restoredItems = hasRestored(accountId);
+            int maxRestoredWeapons = 1;
+            int.TryParse(ini.IniReadValue("misc", "maxitemrestoresperaccount"), out maxRestoredWeapons);
+            if (restoredItems.Count() >= maxRestoredWeapons)
+            {
+                string retstr = "An item has allready been restored for " + character + "!";
+                return retstr;
+            }
+            string wepToRestore = null;
             try
             {
-                foreach (string user in mailRecepients)
+                if (string.IsNullOrEmpty(wepcode))
                 {
-                    string mailReciever = UserFunctions.getCharacterIdFromName(user);
+                    return "Invalid or missing weapon code!";
+                }
+                wepToRestore = wepcode;
+                if (!string.IsNullOrEmpty(wepToRestore))
+                {
+                    SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
+                    logRestore(staff, accountId, accountName, character, wepToRestore);
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore);
+            return "The weapon has been found and restored for " + character + "!";
+        }
+
+        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
+        {
+            List<string> mailToList = null;
+            string retmsg = "The item has been sent to ";
+            if (charactername == "all")
+            {
+                mailToList = UserFunctions.playerList("id", "all");
+                if (mailToList.Count() <=0 )
+                {
+                    return "error getting players!";
+                }
+                retmsg = retmsg + "all players (" + mailToList.Count().ToString() + ")";
+            }
+            else if (charactername == "allonline")
+            {
+                mailToList = UserFunctions.playerList("id", "online");
+                if (mailToList.Count() <=0)
+                {
+                    return "There are no players online!";
+                }
+                retmsg = retmsg + "all online players (" + mailToList.Count().ToString() + ")";
+            }
+            else
+            {
+                mailToList = new List<string>();
+                mailToList.Add(UserFunctions.getCharacterIdFromName(charactername));
+                retmsg = retmsg + charactername;
+            }
+            try
+            {
+                foreach (string recipient in mailToList)
+                {
                     using (conn = new SqlConnection())
                     {
                         conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
                         string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
                         SqlCommand oCmd = new SqlCommand(oString, conn);
-                        oCmd.Parameters.AddWithValue("@CID", mailReciever);
+                        oCmd.Parameters.AddWithValue("@CID", recipient);
                         oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
                         oCmd.Parameters.AddWithValue("@Count", count);
-                        oCmd.Parameters.AddWithValue("@MailContent", "Here is the item you requested from " + mailsender);
-                        oCmd.Parameters.AddWithValue("@MailTitle", "From Iset and " + mailsender);
+                        oCmd.Parameters.AddWithValue("@MailContent", mailcontent);
+                        oCmd.Parameters.AddWithValue("@MailTitle", mailsender);
                         conn.Open();
                         oCmd.ExecuteNonQuery();
                         conn.Close();
                     }
-                    if (i == 0)
-                    {
-                        mailTo = user;
-                    }
-                    else
-                    {
-                        mailTo = mailTo + ", " + user;
-                    }
-                    i++;
-                }
-
-                return "The items have been sent to " + mailTo + "! They will need to relog or run a quest to see the mail!";
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }
-
-        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
-        {
-            string characterId = UserFunctions.getCharacterIdFromName(charactername);
-            try
-            {
-                using (conn = new SqlConnection())
-                {
-                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
-                    SqlCommand oCmd = new SqlCommand(oString, conn);
-                    oCmd.Parameters.AddWithValue("@CID", characterId);
-                    oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
-                    oCmd.Parameters.AddWithValue("@Count", count);
-                    oCmd.Parameters.AddWithValue("@MailContent", mailcontent);
-                    oCmd.Parameters.AddWithValue("@MailTitle", mailsender);
-                    conn.Open();
-                    oCmd.ExecuteNonQuery();
-                    conn.Close();
-                    return "The item has been sent to " + charactername + "! They will need to relog or run a quest to see the mail!";
                 }
             }
             catch (Exception ex)
             {
                 return ex.Message;
             }
+            retmsg = retmsg + "! They will need to relog or run a quest to see the mail!";
+            return retmsg;
         }
     }
 }
