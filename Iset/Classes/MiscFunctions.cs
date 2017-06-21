@@ -34,33 +34,39 @@ namespace Iset
             }
         }
 
-        public static string onlinePlayers2(bool listAll = false)
+        public static string onlinePlayers2(bool listAll = false, bool useNew = false)
         {
             string restsr = "Error retrieving online players";
             if (onlinePlayers().Count() == 0)
                 return "Players Online: 0 at Time: " + DateTime.Now;
-
-            try
+            if (useNew)
             {
-                using (conn = new SqlConnection())
+                try
                 {
-                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroesLog; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "SELECT TOP 1 * FROM UserCountLog ORDER BY [TIMESTAMP] ASC";
-                    SqlCommand oCmd = new SqlCommand(oString, conn);
-                    conn.Open();
-                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    using (conn = new SqlConnection())
                     {
-                        while (oReader.Read())
+                        conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroesLog; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                        string oString = "SELECT TOP 1 * FROM UserCountLog ORDER BY [TIMESTAMP] ASC";
+                        SqlCommand oCmd = new SqlCommand(oString, conn);
+                        conn.Open();
+                        using (SqlDataReader oReader = oCmd.ExecuteReader())
                         {
-                            restsr = "Players Online: " + oReader["usercount"].ToString() + " at time " + oReader["TIMESTAMP"].ToString() + Environment.NewLine + "Waiting : " + oReader["Wait"].ToString() + Environment.NewLine + "Quest : " + oReader["Quest"].ToString();
+                            while (oReader.Read())
+                            {
+                                restsr = "Players Online: " + oReader["usercount"].ToString() + " at time " + oReader["TIMESTAMP"].ToString() + Environment.NewLine + "Waiting : " + oReader["Wait"].ToString() + Environment.NewLine + "Quest : " + oReader["Quest"].ToString();
+                            }
+                            conn.Close();
                         }
-                        conn.Close();
                     }
                 }
+                catch (Exception ex)
+                {
+                    return ex.Message;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                return ex.Message;
+                restsr = "Players Online: " + onlinePlayers().Count().ToString() + " at time " + DateTime.Now.ToString();
             }
             if (listAll)
             {
