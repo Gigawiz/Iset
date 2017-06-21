@@ -362,7 +362,7 @@ namespace Iset
                     using (conn = new SqlConnection())
                     {
                         conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                        string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
+                        string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 1, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
                         SqlCommand oCmd = new SqlCommand(oString, conn);
                         oCmd.Parameters.AddWithValue("@CID", recipient);
                         oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);

@@ -86,8 +86,9 @@ namespace Iset
                    {
                        await processCommand(e);
                    });
-            _client.GetService<CommandService>().CreateCommand("soaps") //create command greet
+            _client.GetService<CommandService>().CreateCommand("fix") //create command greet
                    .Description("clears broken soaps") //add description, it will be shown when ~help is used
+                   .Parameter("whatdoifix", ParameterType.Required)
                    .Parameter("announce", ParameterType.Optional)
                    .Do(async e =>
                    {
@@ -188,7 +189,16 @@ namespace Iset
                    await processCommand(e);
 
                });
-           _client.GetService<CommandService>().CreateCommand("getloginuser") //create command greet
+            _client.GetService<CommandService>().CreateCommand("getcharacterid") //create command greet
+   .Description("get the account id for a character") //add description, it will be shown when ~help is used
+   .Parameter("username", ParameterType.Required)
+   .Do(async e =>
+   {
+       await processCommand(e);
+
+   });
+            //getcharacterid
+            _client.GetService<CommandService>().CreateCommand("getloginuser") //create command greet
                .Description("get the login string for a character") //add description, it will be shown when ~help is used
                .Parameter("username", ParameterType.Required)
                .Do(async e =>
@@ -474,15 +484,6 @@ namespace Iset
                     await e.Channel.SendMessage(UserFunctions.checkActivity(e.GetArg("username")));
                     Logging.LogItem(e.User.Name + " checked the activity of " + e.GetArg("username"));
                     break;
-                case "soaps":
-                    if (!string.IsNullOrEmpty(e.GetArg("announce")) && announcementsEnabled && announcementsChannel > 0)
-                    {
-                        Channel sndAnnounce = _client.GetChannel(announcementsChannel);
-                        await sndAnnounce.SendMessage(sndAnnounce.Server.EveryoneRole.Mention + " The soaps have been cleared by " + e.User.Mention + "! You may now place them down again.");
-                    }
-                    await e.Channel.SendMessage(MiscFunctions.clearSoaps());
-                    Logging.LogItem(e.User.Name + " has cleared bath soaps");
-                    break;
                 case "clearqueue":
                     await e.Channel.SendMessage(ItemFunctions.clearQueue());
                     Logging.LogItem(e.User.Name + " has cleared the item queue");
@@ -656,6 +657,14 @@ namespace Iset
                     await e.Channel.SendMessage(UserFunctions.giveApToChar(e.GetArg("username"), amount));
                     Logging.LogItem(e.User.Name + " has given " + e.GetArg("username") + " " + amount.ToString() + " AP.");
                     break;
+                case "getcharacterid":
+                    if (!checkValidInput(e.GetArg("username")))
+                    {
+                        await e.Channel.SendMessage("Invalid data");
+                        return;
+                    }
+                    await e.Channel.SendMessage(UserFunctions.getCharacterIdFromName(e.GetArg("username")));
+                    break;
                 case "getaccountid":
                     if (!checkValidInput(e.GetArg("username")))
                     {
@@ -711,28 +720,13 @@ namespace Iset
                     Logging.LogItem(e.User.Name + " has banned " + e.GetArg("username") + " for reason: " + e.GetArg("reason"));
                     break;
                 case "online":
-                    List<string> players = MiscFunctions.onlinePlayers();
-                    string playernames = null;
                     if (!String.IsNullOrEmpty(e.GetArg("list")) && e.GetArg("list") == "all")
                     {
-                        int cnt = 0;
-                        foreach (string player in players)
-                        {
-                            if (cnt == 0)
-                            {
-                                playernames = player;
-                            }
-                            else
-                            {
-                                playernames = playernames + ", " + player;
-                            }
-                            cnt++;
-                        }
-                        await e.Channel.SendMessage("Players Online: " + players.Count().ToString() + " at time: " + DateTime.Now + Environment.NewLine + playernames);
+                        await e.Channel.SendMessage(MiscFunctions.onlinePlayers2(true));
                     }
                     else
                     {
-                        await e.Channel.SendMessage("Players Online: " + players.Count().ToString() + " at time: " + DateTime.Now);
+                        await e.Channel.SendMessage(MiscFunctions.onlinePlayers2());
                     }
                     Logging.LogItem(e.User.Name + " has listed online players.");
                     break;
@@ -802,7 +796,7 @@ namespace Iset
                 case "server":
                     await e.Channel.SendMessage(ServerFunctions.parseServerAction(e.GetArg("command"), e.GetArg("othervars")));
                     break;
-                case "rng":
+                /*case "rng":
                     if (e.GetArg("rngcmd") == "randomplayer")
                     {
                         await e.Channel.SendMessage(EventFunctions.pickRandomPlayer(e.GetArg("playerstochoosefrom")));
@@ -810,6 +804,38 @@ namespace Iset
                     else
                     {
                         await e.Channel.SendMessage("This command currently only works with the \"randomplayer\" paramater");
+                    }
+                    break;*/
+                case "fix":
+                    if (e.GetArg("whatdoifix") == "market")
+                    {
+                        if (!checkPerms(e.User, "fixmarket"))
+                        {
+                            await e.Channel.SendMessage("You do not have permission to use " + e.Command.Text + " for the marketplace!");
+                            return;
+                        }
+                        if (!string.IsNullOrEmpty(e.GetArg("announce")) && announcementsEnabled && announcementsChannel > 0)
+                        {
+                            Channel sndAnnounce = _client.GetChannel(announcementsChannel);
+                            await sndAnnounce.SendMessage(sndAnnounce.Server.EveryoneRole.Mention + " Items that have expired on the marketplace have been sent to their respective owners! Please relog to see the items in your mailbox!");
+                        }
+                        await e.Channel.SendMessage(ServerFunctions.returnExpiredMarketItems());
+                        Logging.LogItem(e.User.Name + " has restored expired marketplace items");
+                    }
+                    else if (e.GetArg("whatdoifix") == "soaps")
+                    {
+                        if (!checkPerms(e.User, "fixsoaps"))
+                        {
+                            await e.Channel.SendMessage("You do not have permission to use " + e.Command.Text + " for soaps!");
+                            return;
+                        }
+                        if (!string.IsNullOrEmpty(e.GetArg("announce")) && announcementsEnabled && announcementsChannel > 0)
+                        {
+                            Channel sndAnnounce = _client.GetChannel(announcementsChannel);
+                            await sndAnnounce.SendMessage(sndAnnounce.Server.EveryoneRole.Mention + " The soaps have been cleared by " + e.User.Mention + "! You may now place them down again.");
+                        }
+                        await e.Channel.SendMessage(MiscFunctions.clearSoaps());
+                        Logging.LogItem(e.User.Name + " has cleared bath soaps");
                     }
                     break;
                 default:

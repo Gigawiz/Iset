@@ -34,6 +34,53 @@ namespace Iset
             }
         }
 
+        public static string onlinePlayers2(bool listAll = false)
+        {
+            string restsr = "Error retrieving online players";
+            if (onlinePlayers().Count() == 0)
+                return "Players Online: 0 at Time: " + DateTime.Now;
+
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroesLog; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT TOP 1 * FROM UserCountLog ORDER BY [TIMESTAMP] ASC";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            restsr = "Players Online: " + oReader["usercount"].ToString() + " at time " + oReader["TIMESTAMP"].ToString() + Environment.NewLine + "Waiting : " + oReader["Wait"].ToString() + Environment.NewLine + "Quest : " + oReader["Quest"].ToString();
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            if (listAll)
+            {
+                string userstr = "Unable to retrive player list!";
+                foreach (string username in onlinePlayers())
+                {
+                    if (userstr == "")
+                    {
+                        userstr = username;
+                    }
+                    else
+                    {
+                        userstr = userstr + ", " + username;
+                    }
+                }
+                restsr = restsr + Environment.NewLine + userstr;
+            }
+            return restsr;
+        }
+
         public static List<string> onlinePlayers()
         {
             List<string> onlineNames = new List<string>();

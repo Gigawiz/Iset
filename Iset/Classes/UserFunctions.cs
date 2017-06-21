@@ -383,6 +383,11 @@ namespace Iset
             {
                 return "That is not a valid character name!";
             }
+            string nameExists = getUserIdFromCharacterName(currentname);
+            if (!string.IsNullOrEmpty(nameExists))
+            {
+                return "Character name is already taken!";
+            }
             try
             {
                 using (conn = new SqlConnection())
