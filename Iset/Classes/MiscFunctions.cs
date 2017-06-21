@@ -70,7 +70,7 @@ namespace Iset
             }
             if (listAll)
             {
-                string userstr = "Unable to retrive player list!";
+                string userstr = "";
                 foreach (string username in onlinePlayers())
                 {
                     if (userstr == "")
