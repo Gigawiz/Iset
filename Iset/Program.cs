@@ -197,6 +197,15 @@ namespace Iset
        await processCommand(e);
 
    });
+            _client.GetService<CommandService>().CreateCommand("profile") //create command greet
+.Description("get the account id for a character") //add description, it will be shown when ~help is used
+.Parameter("charactername", ParameterType.Required)
+.Do(async e =>
+{
+await processCommand(e);
+
+});
+            //charactername
             //getcharacterid
             _client.GetService<CommandService>().CreateCommand("getloginuser") //create command greet
                .Description("get the login string for a character") //add description, it will be shown when ~help is used
@@ -302,6 +311,23 @@ namespace Iset
             _client.GetService<CommandService>().CreateCommand("rng")
                 .Parameter("rngcmd", ParameterType.Required)
                 .Parameter("playerstochoosefrom", ParameterType.Unparsed)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("trans")
+                .Parameter("characterid", ParameterType.Required)
+                .Parameter("transtype", ParameterType.Unparsed)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("enchants")
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
+            _client.GetService<CommandService>().CreateCommand("infusions")
                 .Do(async e =>
                 {
                     await processCommand(e);
@@ -793,6 +819,20 @@ namespace Iset
                     await e.Channel.SendMessage(ItemFunctions.dyeItem(e.GetArg("charactername"), e.GetArg("itemcode"), e.GetArg("slot1"), e.GetArg("slot2"), e.GetArg("slot3")));
                     Logging.LogItem(e.User.Name + " has dyed " + e.GetArg("charactername") + "'s " + e.GetArg("itemcode") + " to colors: " + Environment.NewLine + "Slot 1: " + e.GetArg("slot1") + Environment.NewLine + "Slot 2: " + e.GetArg("slot2") + Environment.NewLine + "Slot 3: " + e.GetArg("slot3"));
                     break;
+                case "enchants":
+                    await e.Channel.SendMessage(MiscFunctions.listEnchants());
+                    break;
+                case "infusions":
+                    await e.Channel.SendMessage(MiscFunctions.listInfusions());
+                    break;
+                case "profile":
+                    if (!checkValidInput(e.GetArg("charactername")))
+                    {
+                        await e.Channel.SendMessage("Invalid Player Name.");
+                        return;
+                    }
+                    await e.Channel.SendMessage(UserFunctions.generateProfile(e.GetArg("charactername")));
+                    break;
                 case "server":
                     await e.Channel.SendMessage(ServerFunctions.parseServerAction(e.GetArg("command"), e.GetArg("othervars")));
                     break;
@@ -837,6 +877,15 @@ namespace Iset
                         await e.Channel.SendMessage(MiscFunctions.clearSoaps());
                         Logging.LogItem(e.User.Name + " has cleared bath soaps");
                     }
+                    break;
+                case "trans":
+                    if (!checkValidInput(e.GetArg("characterid")))
+                    {
+                        await e.Channel.SendMessage("Invalid Player Name.");
+                        return;
+                    }
+                    await e.Channel.SendMessage(UserFunctions.setTrans(e.GetArg("characterid"), e.GetArg("transtype")));
+                    Logging.LogItem(e.User.Name + " has set the trans of " + e.GetArg("characterid") + " to level 40 " + e.GetArg("transtype"));
                     break;
                 default:
                     await e.Channel.SendMessage("This command either does not exist, or is still in development.");
