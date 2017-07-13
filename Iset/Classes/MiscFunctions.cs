@@ -35,43 +35,55 @@ namespace Iset
             }
         }
 
-        public static string onlinePlayers2(bool listAll = false, bool useNew = false)
+        internal static Dictionary<string, string> partyMembers()
+        {
+            Dictionary<string, string> partymembers = new Dictionary<string, string>();
+            foreach (KeyValuePair<string,string> kvp in microPlayInstances())
+            {
+                if (partymembers.ContainsKey(kvp.Value))
+                {
+                    partymembers[kvp.Value] = partymembers[kvp.Value] + ", " + UserFunctions.getCharacterNameFromID(kvp.Key);
+                }
+                else
+                {
+                    partymembers.Add(kvp.Value, UserFunctions.getCharacterNameFromID(kvp.Key));
+                }
+            }
+            return partymembers;
+        }
+
+        public static Dictionary<string, string> microPlayInstances()
+        {
+            Dictionary<string, string> MicroPlayInstances = new Dictionary<string, string>();
+            using (conn = new SqlConnection())
+            {
+                conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                string oString = "SELECT * FROM MicroPlayEntity where convert(varchar(10), UpdateTime, 102) = convert(varchar(10), getdate(), 102)";
+                SqlCommand oCmd = new SqlCommand(oString, conn);
+                conn.Open();
+                using (SqlDataReader oReader = oCmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        MicroPlayInstances.Add(oReader["CID"].ToString(), oReader["PartyID"].ToString());
+                    }
+                    conn.Close();
+                }
+            }
+            return MicroPlayInstances;
+        }
+
+        public static string onlinePlayers2(string listcase = null)
         {
             string restsr = "Error retrieving online players";
             if (onlinePlayers().Count() == 0)
                 return "Players Online: 0 at Time: " + DateTime.Now;
-            if (useNew)
+            Dictionary<string, string> microplayinstances = microPlayInstances();
+            int dungeonCount = 0;
+            int totalCount = onlinePlayers().Count();
+            string userstr = "";
+            if (listcase == "all" || listcase == "list")
             {
-                try
-                {
-                    using (conn = new SqlConnection())
-                    {
-                        conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroesLog; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                        string oString = "SELECT TOP 1 * FROM UserCountLog ORDER BY [TIMESTAMP] ASC";
-                        SqlCommand oCmd = new SqlCommand(oString, conn);
-                        conn.Open();
-                        using (SqlDataReader oReader = oCmd.ExecuteReader())
-                        {
-                            while (oReader.Read())
-                            {
-                                restsr = "Players Online: " + oReader["usercount"].ToString() + " at time " + oReader["TIMESTAMP"].ToString() + Environment.NewLine + "Waiting : " + oReader["Wait"].ToString() + Environment.NewLine + "Quest : " + oReader["Quest"].ToString();
-                            }
-                            conn.Close();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    return ex.Message;
-                }
-            }
-            else
-            {
-                restsr = "Players Online: " + onlinePlayers().Count().ToString() + " at time " + DateTime.Now.ToString();
-            }
-            if (listAll)
-            {
-                string userstr = "";
                 foreach (string username in onlinePlayers())
                 {
                     if (userstr == "")
@@ -83,9 +95,87 @@ namespace Iset
                         userstr = userstr + ", " + username;
                     }
                 }
-                restsr = restsr + Environment.NewLine + userstr;
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroesLog; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT TOP 1 * FROM UserCountLog ORDER BY [TIMESTAMP] DESC ";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            int.TryParse(oReader["Quest"].ToString(), out dungeonCount);
+                            int boatCount = dungeonCount - microplayinstances.Count();
+                            if (boatCount < 0) boatCount = 0;
+                            if (listcase == "all")
+                            {
+                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr, partyMembers());
+                            }
+                            else if (listcase == "list")
+                            {
+                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr);
+                            }
+                            else if (listcase == "parties")
+                            {
+                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), null, partyMembers());
+                            }
+                            else
+                            {
+                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString());
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
             }
             return restsr;
+        }
+
+        internal static string genTemplate(string online, string town, string dungeon, string parties, string boats, string fishing, string fruit, string arena, string brawl, string relic, string list = null, Dictionary<string, string> partylist = null)
+        {
+            string template = "```" +
+                "Players Online:                  " + online + Environment.NewLine +
+                "Players In Town:                 " + town + Environment.NewLine +
+                "Players in Dungeon(s):  		 " + dungeon + " (" + parties + " active parties)" + Environment.NewLine +
+                "Players on Boat(s):     		 " + boats + Environment.NewLine +
+                Environment.NewLine +
+                "Players Fishing:                 " + fishing + Environment.NewLine +
+                "Players in Fruit Fight:          " + fruit + Environment.NewLine +
+                "Players in Arena:                " + arena + Environment.NewLine +
+                "Players in Monster Brawl:        " + brawl + Environment.NewLine +
+                "Players in Capture The Relic:    " + relic + Environment.NewLine;
+            if (list != null)
+            {
+                template = template + Environment.NewLine + "Online Players:" + Environment.NewLine + list + Environment.NewLine;
+            }
+            if (partylist != null)
+            {
+                int partynum = 1;
+                foreach (KeyValuePair<string, string> kvp in partylist)
+                {
+                    int partyMembercount = 0;
+                    foreach (string player in kvp.Value.Split(','))
+                    {
+                        partyMembercount++;
+                    }
+                    template = template + Environment.NewLine +
+                     "Party " + partynum.ToString() + ":" + Environment.NewLine +
+                     "        Members (" + partyMembercount.ToString() + "):" + Environment.NewLine +
+                     "            " + kvp.Value + Environment.NewLine +
+                     Environment.NewLine;
+                    partynum++;
+                }
+            }
+            template = template + "```";
+            return template;
         }
 
         public static List<string> onlinePlayers()

@@ -42,7 +42,6 @@ namespace Iset
                         conn.Close();
                     }
                 }
-                Logging.LogItem("Found characters. Checking Accounts.");
                 List<string> accountIds = new List<string>();
                 using (conn = new SqlConnection())
                 {
@@ -96,9 +95,41 @@ namespace Iset
             }
             catch (Exception ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return characterNames;
+        }
+
+        public static string getCharacterNameFromID(string characterid)
+        {
+            string username = null;
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "Select * from CharacterInfo where ID=@fId";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fId", characterid);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (!string.IsNullOrEmpty(oReader["Name"].ToString()))
+                            {
+                                username = oReader["Name"].ToString();
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return username;
         }
 
         public static List<string> playerList(string returnDataType, string searchType = "online", bool skipStorageChars = false)

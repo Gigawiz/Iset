@@ -96,6 +96,8 @@
       <HintPath>..\packages\System.Data.SQLite.Linq.1.0.105.2\lib\net451\System.Data.SQLite.Linq.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -121,6 +123,7 @@
     <Compile Include="Classes\UserFunctions.cs" />
     <Compile Include="Classes\ValidationFunctions.cs" />
     <Compile Include="Classes\ServerFunctions.cs" />
+    <Compile Include="Classes\UnnecessaryFunctions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

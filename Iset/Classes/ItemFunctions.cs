@@ -43,7 +43,7 @@ namespace Iset
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return ret;
         }
@@ -147,6 +147,29 @@ namespace Iset
             }
         }
 
+        public static void logSpawn(string staffname, string characterid, string charactername, string itemcode, string quantity)
+        {
+            try
+            {
+                using (m_dbConnection = new SQLiteConnection("Data Source=iset.db3;Version=3;"))
+                {
+                    string sql = "INSERT INTO item_spawns (discordStaffName,characterName,itemCode,qty) VALUES (@staffName,@characterName, @itemCode, @qty);";
+                    SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+                    command.Parameters.AddWithValue("@staffName", staffname);
+                    command.Parameters.AddWithValue("@characterName", charactername);
+                    command.Parameters.AddWithValue("@itemCode", itemcode);
+                    command.Parameters.AddWithValue("@qty", quantity);
+                    m_dbConnection.Open();
+                    command.ExecuteNonQuery();
+                    m_dbConnection.Close();
+                }
+            }
+            catch (SQLiteException ex)
+            {
+                Logging.OldLogItem(ex.Message);
+            }
+        }
+
         public static void logRestore(string staffname, string accountid, string accountname, string charactername, string itemcode)
         {
             try
@@ -167,7 +190,7 @@ namespace Iset
             }
             catch (SQLiteException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
         }
 
@@ -197,7 +220,7 @@ namespace Iset
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return restoredItems;
         }
@@ -274,16 +297,33 @@ namespace Iset
                 }
                 if (!string.IsNullOrEmpty(wepToRestore))
                 {
+                    if (wepToRestore.Contains("COMBINATION") && !wepToRestore.Contains("avatar"))
+                    {
+                        if (!wepToRestore.Contains("ANTIBIND"))
+                        {
+                            wepToRestore.Replace(']', ',');
+                            wepToRestore = wepToRestore + "ANTIBIND:3]";
+                        }
+                        if (!wepToRestore.Contains("RESTORED"))
+                        {
+                            wepToRestore.Replace(']', ',');
+                            wepToRestore = wepToRestore + "RESTORED:1]";
+                        }
+                    }
+                    else
+                    {
+                        wepToRestore = wepToRestore + "[ANTIBIND:3][RESTORED:1]";
+                    }
                     SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
                     logRestore(staff, accountId, accountName, character, wepToRestore);
                 }
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
                 return ex.Message;
             }
-            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore);
+            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore, staff, "restoreweapon - " +character, wepToRestore);
             return "The weapon has been found and restored for " + character + "!";
         }
 
@@ -313,6 +353,23 @@ namespace Iset
                     return "Invalid or missing weapon code!";
                 }
                 wepToRestore = wepcode;
+                if (wepToRestore.Contains("COMBINATION") && !wepToRestore.Contains("avatar"))
+                {
+                    if (!wepToRestore.Contains("ANTIBIND"))
+                    {
+                        wepToRestore.Replace(']', ',');
+                        wepToRestore = wepToRestore + "ANTIBIND:3]";
+                    }
+                    if (!wepToRestore.Contains("RESTORED"))
+                    {
+                        wepToRestore.Replace(']', ',');
+                        wepToRestore = wepToRestore + "RESTORED:1]";
+                    }
+                }
+                else
+                {
+                    wepToRestore = wepToRestore + "[ANTIBIND:3][RESTORED:1]";
+                }
                 if (!string.IsNullOrEmpty(wepToRestore))
                 {
                     SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
@@ -323,11 +380,11 @@ namespace Iset
             {
                 return ex.Message;
             }
-            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore);
+            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore, staff, "forcerestoreweapon - " +character, wepToRestore);
             return "The weapon has been found and restored for " + character + "!";
         }
 
-        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
+        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender, string staffname = "Iset")
         {
             List<string> mailToList = null;
             string retmsg = "The item has been sent to ";
@@ -355,6 +412,24 @@ namespace Iset
                 mailToList.Add(UserFunctions.getCharacterIdFromName(charactername));
                 retmsg = retmsg + charactername;
             }
+            string itemCode = itemtospawn;
+            if (itemCode.Contains("COMBINATION") && !itemCode.Contains("avatar"))
+            {
+                if (!itemCode.Contains("ANTIBIND"))
+                {
+                    itemCode.Replace(']', ',');
+                    itemCode = itemCode + "ANTIBIND:3]";
+                }
+                if (!itemCode.Contains("RESTORED"))
+                {
+                    itemCode.Replace(']', ',');
+                    itemCode = itemCode + "RESTORED:1]";
+                }
+            }
+            else
+            {
+                itemCode = itemCode + "[ANTIBIND:3][RESTORED:1]";
+            }
             try
             {
                 foreach (string recipient in mailToList)
@@ -365,7 +440,7 @@ namespace Iset
                         string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 1, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
                         SqlCommand oCmd = new SqlCommand(oString, conn);
                         oCmd.Parameters.AddWithValue("@CID", recipient);
-                        oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
+                        oCmd.Parameters.AddWithValue("@ItemClassEx", itemCode);
                         oCmd.Parameters.AddWithValue("@Count", count);
                         oCmd.Parameters.AddWithValue("@MailContent", mailcontent);
                         oCmd.Parameters.AddWithValue("@MailTitle", mailsender);
@@ -373,6 +448,7 @@ namespace Iset
                         oCmd.ExecuteNonQuery();
                         conn.Close();
                     }
+                    logSpawn(staffname.Replace("()", ""), recipient, charactername, itemCode, count.ToString());
                 }
             }
             catch (Exception ex)

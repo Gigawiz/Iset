@@ -5,15 +5,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using System.Data.SqlClient;
-using System.Data;
-using System.Text.RegularExpressions;
-using RemoteControlSystem;
-using Devcat.Core;
-using System.Security.Cryptography;
-using System.Text;
-using RemoteControlSystem.ServerMessage;
-using System.Data.SQLite;
+using System.IO.Compression;
 
 namespace Iset
 {
@@ -188,6 +180,12 @@ namespace Iset
                {
                    await processCommand(e);
 
+               });
+            _client.GetService<CommandService>().CreateCommand("getdb") //create command greet
+               .Description("get a copy of the heroescontents db") //add description, it will be shown when ~help is used
+               .Do(async e =>
+               {
+                   await processCommand(e);
                });
             _client.GetService<CommandService>().CreateCommand("getcharacterid") //create command greet
    .Description("get the account id for a character") //add description, it will be shown when ~help is used
@@ -452,7 +450,7 @@ await processCommand(e);
                     return true;
                 }
             }
-            Logging.LogItem("User " + discordUser.Name + " does not have permission to use given command " + command);
+            Logging.OldLogItem("User " + discordUser.Name + " does not have permission to use given command " + command);
             return false;
         }
 
@@ -480,6 +478,15 @@ await processCommand(e);
             {
                 ulong.TryParse(ini.IniReadValue("discord", "announcements-channel"), out announcementsChannel);
             }
+            string logtext = null;
+            foreach (CommandParameter cmd in e.Command.Parameters)
+            {
+                if (logtext == null)
+                    logtext = cmd.Name;
+                else
+                    logtext = logtext + "," + cmd.Name;
+            }
+            Logging.LogItem(e.User.Name + " has used the " + e.Command.Text + " command.", e.User.Name + "(" + e.User.Nickname + ")", e.Command.Text, logtext);
             switch (e.Command.Text)
             {
                 case "help":
@@ -489,7 +496,6 @@ await processCommand(e);
                         return;
                     }
                     await e.Channel.SendMessage("coming soon");
-                    Logging.LogItem(e.User.Name + " has used the help command.");
                     break;
                 case "unban":
                     if (!checkValidInput(e.GetArg("username")))
@@ -504,7 +510,7 @@ await processCommand(e);
                     }
                     string unbanResult = Bans.unbanUser(e.GetArg("username"));
                     await e.Channel.SendMessage(unbanResult);
-                    Logging.LogItem(e.User.Name + " has unbanned " + e.GetArg("username"));
+                    //LogItem(string logline, string staffname, string cmd, string vars)
                     break;
                 case "lastactive":
                     await e.Channel.SendMessage(UserFunctions.checkActivity(e.GetArg("username")));
@@ -655,12 +661,12 @@ await processCommand(e);
                     {
                         if (!int.TryParse(e.GetArg("count"), out count))
                         {
-                            await e.Channel.SendMessage(ItemFunctions.SendMail(e.GetArg("charactername"), e.GetArg("count"), 1, "Here is the item you requested from " + e.User.Name, "From Iset and " + e.User.Name));
+                            await e.Channel.SendMessage(ItemFunctions.SendMail(e.GetArg("charactername"), e.GetArg("count"), 1, "Here is the item you requested from " + e.User.Name, "From Iset and " + e.User.Name, e.User.Name + "(" + e.User.Nickname + ")"));
                             Logging.LogItem(e.User.Name + " has spawned one " + e.GetArg("count") + " for player " + e.GetArg("charactername"));
                         }
                         else
                         {
-                            await e.Channel.SendMessage(ItemFunctions.SendMail(e.GetArg("charactername"), e.GetArg("itemtospawn"), count, "Here is the item you requested from " + e.User.Name, "From Iset and " + e.User.Name));
+                            await e.Channel.SendMessage(ItemFunctions.SendMail(e.GetArg("charactername"), e.GetArg("itemtospawn"), count, "Here is the item you requested from " + e.User.Name, "From Iset and " + e.User.Name, e.User.Name + "(" + e.User.Nickname + ")"));
                             Logging.LogItem(e.User.Name + " has spawned " + count.ToString() + " " + e.GetArg("itemtospawn") + " for player " + e.GetArg("charactername"));
                         }
                     }
@@ -682,23 +688,6 @@ await processCommand(e);
                     }
                     await e.Channel.SendMessage(UserFunctions.giveApToChar(e.GetArg("username"), amount));
                     Logging.LogItem(e.User.Name + " has given " + e.GetArg("username") + " " + amount.ToString() + " AP.");
-                    break;
-                case "getcharacterid":
-                    if (!checkValidInput(e.GetArg("username")))
-                    {
-                        await e.Channel.SendMessage("Invalid data");
-                        return;
-                    }
-                    await e.Channel.SendMessage(UserFunctions.getCharacterIdFromName(e.GetArg("username")));
-                    break;
-                case "getaccountid":
-                    if (!checkValidInput(e.GetArg("username")))
-                    {
-                        await e.Channel.SendMessage("Invalid Data.");
-                        return;
-                    }
-                    await e.Channel.SendMessage(UserFunctions.getUserIdFromCharacterName(e.GetArg("username")));
-                    Logging.LogItem(e.User.Name + " has retrieved the user id for " + e.GetArg("username"));
                     break;
                 case "getloginuser":
                     if (!checkValidInput(e.GetArg("username")))
@@ -746,9 +735,9 @@ await processCommand(e);
                     Logging.LogItem(e.User.Name + " has banned " + e.GetArg("username") + " for reason: " + e.GetArg("reason"));
                     break;
                 case "online":
-                    if (!String.IsNullOrEmpty(e.GetArg("list")) && e.GetArg("list") == "all")
+                    if (!String.IsNullOrEmpty(e.GetArg("list")))
                     {
-                        await e.Channel.SendMessage(MiscFunctions.onlinePlayers2(true));
+                        await e.Channel.SendMessage(MiscFunctions.onlinePlayers2(e.GetArg("list")));
                     }
                     else
                     {
@@ -886,6 +875,34 @@ await processCommand(e);
                     }
                     await e.Channel.SendMessage(UserFunctions.setTrans(e.GetArg("characterid"), e.GetArg("transtype")));
                     Logging.LogItem(e.User.Name + " has set the trans of " + e.GetArg("characterid") + " to level 40 " + e.GetArg("transtype"));
+                    break;
+                case "getdb":
+                    try
+                    {
+                        string file = @"C:\Server\zh-tw-x-gm\Bin\heroesContents.db3";
+                        string tmpdir = Directory.GetCurrentDirectory() + @"\heroesContents";
+                        string ZipPath = Directory.GetCurrentDirectory() + @"\heroesContents.zip";
+                        if (!Directory.Exists(tmpdir))
+                        {
+                            Directory.CreateDirectory(tmpdir);
+                        }
+                        else
+                        {
+                            Directory.Delete(tmpdir, true);
+                            Directory.CreateDirectory(tmpdir);
+                        }
+                        File.Copy(file, tmpdir + @"\heroesContents.db3");
+                        if (File.Exists(ZipPath))
+                        {
+                            File.Delete(ZipPath);
+                        }
+                        ZipFile.CreateFromDirectory(tmpdir, ZipPath, CompressionLevel.Optimal, false);
+                        await e.Channel.SendFile(ZipPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        await e.Channel.SendMessage(ex.Message);
+                    }
                     break;
                 default:
                     await e.Channel.SendMessage("This command either does not exist, or is still in development.");
