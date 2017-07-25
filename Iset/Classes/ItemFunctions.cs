@@ -508,7 +508,6 @@ namespace Iset
                 {
                     itemCode = itemCode + "[ANTIBIND:3][RESTORED:1]";
                 }
-                return itemCode;
             }
             try
             {

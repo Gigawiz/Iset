@@ -967,7 +967,10 @@ namespace Iset
                                 if (e.GetArg("permission") == "default")
                                 {
                                     perms = "online,banlist,checkban,ban,unban,findalts,restorechar,deletechar,setlevel,giveap,spawn,changename,help,changeguildname,deleteguild,restoreguild,rgb,restoreweapon,dye,enchants,profile,infusions,trans";
-                                    await e.Channel.SendMessage("The following permissions have been granted to " + e.GetArg("tagdiscordusers") + ": ```" + perms + "```");
+                                    foreach (string user in e.GetArg("tagdiscordusers").Split(' '))
+                                    {
+                                        await e.Channel.SendMessage("The following permissions have been granted to " + user + ": ```" + perms + "```");
+                                    }
                                 }
                                 else if (e.GetArg("permission") == "all")
                                 {
@@ -1018,7 +1021,10 @@ namespace Iset
                                 if (e.GetArg("permission") == "default")
                                 {
                                     perms = "online,banlist,checkban,ban,unban,findalts,restorechar,deletechar,setlevel,giveap,spawn,changename,help,changeguildname,deleteguild,restoreguild,rgb,restoreweapon,dye,enchants,profile,infusions,trans";
-                                    await e.Channel.SendMessage("The following permissions have been granted to " + e.GetArg("tagdiscordusers") + ": ```" + perms + "```");
+                                    foreach (string user in e.GetArg("tagdiscordusers").Split(' '))
+                                    {
+                                        await e.Channel.SendMessage("The following permissions have been granted to " + user + ": ```" + perms + "```");
+                                    }
                                 }
                                 else if (e.GetArg("permission") == "all")
                                 {
