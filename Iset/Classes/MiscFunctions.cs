@@ -113,19 +113,19 @@ namespace Iset
                             if (boatCount < 0) boatCount = 0;
                             if (listcase == "all")
                             {
-                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr, partyMembers());
+                                restsr = Templates.OnlineTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr, partyMembers());
                             }
                             else if (listcase == "list")
                             {
-                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr);
+                                restsr = Templates.OnlineTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), userstr);
                             }
                             else if (listcase == "parties")
                             {
-                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), null, partyMembers());
+                                restsr = Templates.OnlineTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString(), null, partyMembers());
                             }
                             else
                             {
-                                restsr = genTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString());
+                                restsr = Templates.OnlineTemplate(totalCount.ToString(), (totalCount - dungeonCount).ToString(), microplayinstances.Count().ToString(), microplayinstances.Values.Distinct().Count().ToString(), boatCount.ToString(), oReader["Fish"].ToString(), oReader["PVP_FMatch"].ToString(), oReader["PVP_Arena"].ToString(), oReader["PVP_MMatch"].ToString(), oReader["PVP_PMatch"].ToString());
                             }
                         }
                         conn.Close();
@@ -137,45 +137,6 @@ namespace Iset
                 return ex.Message;
             }
             return restsr;
-        }
-
-        internal static string genTemplate(string online, string town, string dungeon, string parties, string boats, string fishing, string fruit, string arena, string brawl, string relic, string list = null, Dictionary<string, string> partylist = null)
-        {
-            string template = "```" +
-                "Players Online:                  " + online + Environment.NewLine +
-                "Players In Town:                 " + town + Environment.NewLine +
-                "Players in Dungeon(s):  		 " + dungeon + " (" + parties + " active parties)" + Environment.NewLine +
-                "Players on Boat(s):     		 " + boats + Environment.NewLine +
-                Environment.NewLine +
-                "Players Fishing:                 " + fishing + Environment.NewLine +
-                "Players in Fruit Fight:          " + fruit + Environment.NewLine +
-                "Players in Arena:                " + arena + Environment.NewLine +
-                "Players in Monster Brawl:        " + brawl + Environment.NewLine +
-                "Players in Capture The Relic:    " + relic + Environment.NewLine;
-            if (list != null)
-            {
-                template = template + Environment.NewLine + "Online Players:" + Environment.NewLine + list + Environment.NewLine;
-            }
-            if (partylist != null)
-            {
-                int partynum = 1;
-                foreach (KeyValuePair<string, string> kvp in partylist)
-                {
-                    int partyMembercount = 0;
-                    foreach (string player in kvp.Value.Split(','))
-                    {
-                        partyMembercount++;
-                    }
-                    template = template + Environment.NewLine +
-                     "Party " + partynum.ToString() + ":" + Environment.NewLine +
-                     "        Members (" + partyMembercount.ToString() + "):" + Environment.NewLine +
-                     "            " + kvp.Value + Environment.NewLine +
-                     Environment.NewLine;
-                    partynum++;
-                }
-            }
-            template = template + "```";
-            return template;
         }
 
         public static List<string> onlinePlayers()

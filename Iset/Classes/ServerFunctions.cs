@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,7 +16,7 @@ namespace Iset
         static IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
         public static void doTimedCommands()
         {
-            returnExpiredMarketItems();
+            Logging.LogItem(returnExpiredMarketItems(), "console", "!fix", "market");
             runMarketAvgPrices();
         }
 
@@ -69,25 +70,25 @@ namespace Iset
 
         public static string sendAnnounceToServer(string message)
         {
-            
+
 
             return null;
         }
 
-        public static string parseServerAction(string action, string args = null)
+        public static string parseServerAction(string action, string server)
         {
             switch (action)
             {
                 case "start":
-                    stopServer();
-                    startServer();
+                    stopServer(server);
+                    startServer(server);
                     return "Server Started";
                 case "stop":
-                    stopServer();
+                    stopServer(server);
                     return "Server Stopped";
                 case "restart":
-                    stopServer();
-                    startServer();
+                    stopServer(server);
+                    startServer(server);
                     return "Server Restarted";
                 case "updateHeroesContents":
 
@@ -99,28 +100,110 @@ namespace Iset
             return "Not Implemented Yet.";
         }
 
-        internal static void startServer()
+        internal static void startServer(string servername)
         {
-            /*cd bin
-start Executer.exe UnifiedNetwork.dll UnifiedNetwork.LocationService.LocationService StartService LocationService 42
-start Executer.exe AdminClientServiceCore.dll AdminClientServiceCore.AdminClientService StartService AdminService 127.0.0.1 42
-start Executer.exe FrontendServiceCore.dll FrontendServiceCore.FrontendService StartService FrontendService 127.0.0.1 42
-start Executer.exe CashShopService.dll CashShopService.CashShopService StartService CashShopService 127.0.0.1 42
-start Executer.exe RankService.dll RankService.RankService StartService RankService 127.0.0.1 42
-start Executer.exe GuildService.dll GuildService.GuildService StartService GuildService 127.0.0.1 42
-start Executer.exe PvpService.dll PvpService.PvpService StartService PvpService 127.0.0.1 42
-start Executer.exe LoginServiceCore.dll LoginServiceCore.LoginService StartService LoginService 127.0.0.1 42
-start Executer.exe MicroPlayServiceCore.dll MicroPlayServiceCore.MicroPlayService StartService MIcroPlayService 127.0.0.1 42
-start Executer.exe MMOChannelService.dll MMOChannelService.MMOChannelService StartService MMOChannelService 127.0.0.1 42
-start Executer.exe PlayerService.dll PlayerService.PlayerService StartService PlayerService 127.0.0.1 42
-start Executer.exe DSService.dll DSService.DSService StartService DSService 127.0.0.1 42
-start Executer.exe PingService.dll PingServiceCore.PingService StartService PingService 127.0.0.1 42
-start Executer.exe UserDSHostService.dll UserDSHostService.UserDSHostService StartService UserDSHostService 127.0.0.1 42*/
+            switch (servername)
+            {
+                case "all":
+                    Process p = new Process();
+                    break;
+                case "LocationService":
+
+                    break;
+                case "AdminService":
+
+                    break;
+                case "FrontendService":
+
+                    break;
+                case "CashShopService":
+
+                    break;
+                case "RankService":
+
+                    break;
+                case "GuildService":
+
+                    break;
+                case "PvpService":
+
+                    break;
+                case "LoginService":
+
+                    break;
+                case "MIcroPlayService":
+
+                    break;
+                case "MMOChannelService":
+
+                    break;
+                case "PlayerService":
+
+                    break;
+                case "DSService":
+
+                    break;
+                case "PingService":
+
+                    break;
+                case "UserDSHostService":
+
+                    break;
+            }
         }
 
-        internal static void stopServer()
+        internal static void stopServer(string servername)
         {
+
             //taskkill / f / im Executer.exe
+            switch (servername)
+            {
+                case "all":
+
+                    break;
+                case "LocationService":
+
+                    break;
+                case "AdminService":
+
+                    break;
+                case "FrontendService":
+
+                    break;
+                case "CashShopService":
+
+                    break;
+                case "RankService":
+
+                    break;
+                case "GuildService":
+
+                    break;
+                case "PvpService":
+
+                    break;
+                case "LoginService":
+
+                    break;
+                case "MIcroPlayService":
+
+                    break;
+                case "MMOChannelService":
+
+                    break;
+                case "PlayerService":
+
+                    break;
+                case "DSService":
+
+                    break;
+                case "PingService":
+
+                    break;
+                case "UserDSHostService":
+
+                    break;
+            }
         }
     }
 }

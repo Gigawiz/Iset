@@ -6,6 +6,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Windows.Forms;
+using System.Threading;
 
 namespace Iset
 {
@@ -15,8 +17,12 @@ namespace Iset
         public static DiscordClient _client;
         IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
         bool customHelpCommand = false;
+        System.Windows.Forms.Timer t1 = new System.Windows.Forms.Timer();
         public void Start()
         {
+            t1.Enabled = true;
+            t1.Interval = 300000;
+            t1.Tick += T1_Tick;
             initialize();
             _client = new DiscordClient();
             char cmd = '!';
@@ -46,9 +52,12 @@ namespace Iset
             //this is used to read ALL text chat, not just commands with the prefix
             _client.MessageReceived += async (s, e) =>
             {
-                if (!e.Message.IsAuthor && e.Message.RawText.Contains("(╯°□°）╯︵ ┻━┻") && checkPerms(e.User, "tableflip"))
+                if (!e.Message.IsAuthor)
                 {
-                    await e.Channel.SendMessage("┬─┬﻿ ノ( ゜-゜ノ)");
+                    if (e.Message.RawText.Contains("(╯°□°）╯︵ ┻━┻") || e.Message.RawText.Contains("┻") || e.Message.RawText.Contains("━") || e.Message.RawText.Contains("▔") && checkPerms(e.User, "tableflip"))
+                    {
+                        await e.Channel.SendMessage("┬─┬﻿ ノ( ゜-゜ノ)");
+                    }
                 }
             };
             #region commands
@@ -70,13 +79,6 @@ namespace Iset
                            await e.Channel.SendIsTyping();
                        }
                        await e.Channel.SendMessage("I was created by Gigawiz to help staff administrate a vindictus server without needing hands on access to the database or server. You might see me around on the BloodRedDawn Discord under the name 'Iset' or 'Saber' (my test alias). I am currently in beta, so there will be bugs along the way. You can see my source code, issues and download the latest build at https://github.com/Gigawiz/Iset .");
-                   });
-            _client.GetService<CommandService>().CreateCommand("lastactive") //create command greet
-                   .Description("checks last activity of a character or account") //add description, it will be shown when ~help is used
-                   .Parameter("username", ParameterType.Required)
-                   .Do(async e =>
-                   {
-                       await processCommand(e);
                    });
             _client.GetService<CommandService>().CreateCommand("fix") //create command greet
                    .Description("clears broken soaps") //add description, it will be shown when ~help is used
@@ -188,23 +190,21 @@ namespace Iset
                    await processCommand(e);
                });
             _client.GetService<CommandService>().CreateCommand("getcharacterid") //create command greet
-   .Description("get the account id for a character") //add description, it will be shown when ~help is used
-   .Parameter("username", ParameterType.Required)
-   .Do(async e =>
-   {
-       await processCommand(e);
+               .Description("get the account id for a character") //add description, it will be shown when ~help is used
+               .Parameter("username", ParameterType.Required)
+               .Do(async e =>
+               {
+                   await processCommand(e);
 
-   });
+               });
             _client.GetService<CommandService>().CreateCommand("profile") //create command greet
-.Description("get the account id for a character") //add description, it will be shown when ~help is used
-.Parameter("charactername", ParameterType.Required)
-.Do(async e =>
-{
-await processCommand(e);
+            .Description("get the account id for a character") //add description, it will be shown when ~help is used
+            .Parameter("charactername", ParameterType.Required)
+            .Do(async e =>
+            {
+            await processCommand(e);
 
-});
-            //charactername
-            //getcharacterid
+            });
             _client.GetService<CommandService>().CreateCommand("getloginuser") //create command greet
                .Description("get the login string for a character") //add description, it will be shown when ~help is used
                .Parameter("username", ParameterType.Required)
@@ -330,6 +330,14 @@ await processCommand(e);
                 {
                     await processCommand(e);
                 });
+            _client.GetService<CommandService>().CreateCommand("perms")
+                .Parameter("permsmode", ParameterType.Required)
+                .Parameter("permission", ParameterType.Required)
+                .Parameter("tagdiscordusers", ParameterType.Multiple)
+                .Do(async e =>
+                {
+                    await processCommand(e);
+                });
             #endregion
             //
             _client.ExecuteAndWait(async () =>
@@ -337,6 +345,11 @@ await processCommand(e);
                 await _client.Connect(ini.IniReadValue("discord", "bot-token"), TokenType.Bot);
             });
             _client.SetGame("Blood Red Dawn", GameType.Default, "github.com/Gigawiz/Iset");
+        }
+
+        private void T1_Tick(object sender, EventArgs e)
+        {
+            ServerFunctions.doTimedCommands();
         }
 
         #region defaultconfigSetup
@@ -403,6 +416,10 @@ await processCommand(e);
             {
                 inidefault.IniWriteValue("misc", "maxitemrestoresperaccount", "1");
             }
+            if (String.IsNullOrEmpty(ini.IniReadValue("discord", "AllowedResponseChannels")))
+            {
+                ini.IniWriteValue("discord", "AllowedResponseChannels", "comma seperate channel ids where bot commands can be used");
+            }
         }
         #endregion
 
@@ -425,33 +442,62 @@ await processCommand(e);
 
         }
 
-        public bool checkPerms(User discordUser, string command)
+        public bool checkPerms(User discordUser, string command, string channelid = null)
         {
-            IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
-            string perms = ini.IniReadValue("permissions", discordUser.Id.ToString());
-            if (string.IsNullOrEmpty(perms))
+            if (channelid != null)
             {
-                return false;
-            }
-            if (perms.Split(',').Count() > 1)
-            {
-                foreach (string userperm in perms.Split(','))
+                IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
+                string channelids = ini.IniReadValue("discord", "AllowedResponseChannels");
+                if (!string.IsNullOrEmpty(channelids) || channelids != "comma seperate channel ids where bot commands can be used")
                 {
-                    if (command == userperm)
+                    if (channelids.Contains(","))
                     {
-                        return true;
+                        foreach (string channel in channelids.Split(','))
+                        {
+                            if (channelid == channel)
+                                return true;
+                        }
                     }
+                    else
+                    {
+                        if (channelids == channelid)
+                            return true;
+                    }
+                    return false;
                 }
-            }
-            else
-            {
-                if (command == perms)
+                else
                 {
                     return true;
                 }
             }
-            Logging.OldLogItem("User " + discordUser.Name + " does not have permission to use given command " + command);
-            return false;
+            else
+            {
+                IniFile ini = new IniFile(Directory.GetCurrentDirectory() + @"\config.ini");
+                string perms = ini.IniReadValue("permissions", discordUser.Id.ToString());
+                if (string.IsNullOrEmpty(perms))
+                {
+                    return false;
+                }
+                if (perms.Split(',').Count() > 1)
+                {
+                    foreach (string userperm in perms.Split(','))
+                    {
+                        if (command == userperm)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (command == perms)
+                    {
+                        return true;
+                    }
+                }
+                Logging.OldLogItem("User " + discordUser.Name + " does not have permission to use given command " + command);
+                return false;
+            }
         }
 
         public bool checkValidInput(string input)
@@ -465,6 +511,11 @@ await processCommand(e);
 
         public async Task processCommand(CommandEventArgs e)
         {
+            bool hasChannelPerms = checkPerms(e.User, e.Command.Text, e.Channel.Id.ToString());
+            if (!hasChannelPerms)
+            {
+                return;
+            }
             bool hasPerms = checkPerms(e.User, e.Command.Text);
             if (!hasPerms)
             {
@@ -511,10 +562,6 @@ await processCommand(e);
                     string unbanResult = Bans.unbanUser(e.GetArg("username"));
                     await e.Channel.SendMessage(unbanResult);
                     //LogItem(string logline, string staffname, string cmd, string vars)
-                    break;
-                case "lastactive":
-                    await e.Channel.SendMessage(UserFunctions.checkActivity(e.GetArg("username")));
-                    Logging.LogItem(e.User.Name + " checked the activity of " + e.GetArg("username"));
                     break;
                 case "clearqueue":
                     await e.Channel.SendMessage(ItemFunctions.clearQueue());
@@ -902,6 +949,89 @@ await processCommand(e);
                     catch (Exception ex)
                     {
                         await e.Channel.SendMessage(ex.Message);
+                    }
+                    break;
+                case "perms":
+                    foreach (User u in e.Message.MentionedUsers)
+                    {
+                        if (u.Id == 339273798274514955 || u.Id == 338911174890356756)
+                        {
+                            await e.Channel.SendMessage("I cannot assign permissions to myself!");
+                            return;
+                        }
+                        string perms = ini.IniReadValue("permissions", u.Id.ToString());
+                        if (!string.IsNullOrEmpty(perms))
+                        {
+                            if (e.GetArg("permsmode") == "add")
+                            {
+                                if (e.GetArg("permission") == "default")
+                                {
+                                    perms = "online,banlist,checkban,ban,unban,findalts,restorechar,deletechar,setlevel,giveap,spawn,changename,help,changeguildname,deleteguild,restoreguild,rgb,restoreweapon,dye,enchants,profile,infusions,trans";
+                                    await e.Channel.SendMessage("The following permissions have been granted to " + e.GetArg("tagdiscordusers") + ": ```" + perms + "```");
+                                }
+                                else if (e.GetArg("permission") == "all")
+                                {
+                                    /*perms = null;
+                                    foreach (Command cmd in _client.GetService<CommandService>().AllCommands)
+                                    {
+                                        if (cmd.Text.ToLower() != "getdb" || cmd.Text.ToLower() != "help")
+                                        {
+                                            if (perms == null)
+                                            {
+                                                perms = perms + cmd.Text;
+                                            }
+                                            else
+                                            {
+                                                perms = perms + "," + cmd.Text;
+                                            }
+                                        }
+                                    }*/
+                                    await e.Channel.SendMessage("The All permissions command is still being worked on. Please check back later.");
+                                }
+                                else
+                                {
+                                    perms = perms + "," + e.GetArg("permission");
+                                    await e.Channel.SendMessage(e.GetArg("tagdiscordusers") + " has been granted access to use the `" + e.GetArg("permission") + "` command.");
+                                }
+                            }
+                            else
+                            {
+                                if (e.GetArg("permission") == "all")
+                                {
+                                    perms = "";
+                                    await e.Channel.SendMessage("All permissions have been removed from " + e.GetArg("tagdiscordusers"));
+                                }
+                                else
+                                {
+                                    perms = perms.Replace("," + e.GetArg("permission"), "");
+                                    perms = perms.Replace(e.GetArg("permission") + ",", "");
+                                    perms = perms.Replace(e.GetArg("permission"), "");
+                                    await e.Channel.SendMessage(e.GetArg("tagdiscordusers") + " has lost access to the `" + e.GetArg("permission") + "` command");
+                                }
+                            }
+                            ini.IniWriteValue("permissions", u.Id.ToString(), perms);
+                        }
+                        else
+                        {
+                            if (e.GetArg("permsmode") == "add")
+                            {
+                                if (e.GetArg("permission") == "default")
+                                {
+                                    perms = "online,banlist,checkban,ban,unban,findalts,restorechar,deletechar,setlevel,giveap,spawn,changename,help,changeguildname,deleteguild,restoreguild,rgb,restoreweapon,dye,enchants,profile,infusions,trans";
+                                    await e.Channel.SendMessage("The following permissions have been granted to " + e.GetArg("tagdiscordusers") + ": ```" + perms + "```");
+                                }
+                                else if (e.GetArg("permission") == "all")
+                                {
+                                    await e.Channel.SendMessage("The All permissions command is still being worked on. Please check back later.");
+                                }
+                                else
+                                {
+                                    perms = perms + e.GetArg("permission");
+                                    await e.Channel.SendMessage(e.GetArg("tagdiscordusers") + " has been granted access to use the `" + e.GetArg("permission") + "` command.");
+                                }
+                            }
+                            ini.IniWriteValue("permissions", u.Id.ToString(), perms);
+                        }
                     }
                     break;
                 default:

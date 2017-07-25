@@ -297,23 +297,6 @@ namespace Iset
                 }
                 if (!string.IsNullOrEmpty(wepToRestore))
                 {
-                    if (wepToRestore.Contains("COMBINATION") && !wepToRestore.Contains("avatar"))
-                    {
-                        if (!wepToRestore.Contains("ANTIBIND"))
-                        {
-                            wepToRestore.Replace(']', ',');
-                            wepToRestore = wepToRestore + "ANTIBIND:3]";
-                        }
-                        if (!wepToRestore.Contains("RESTORED"))
-                        {
-                            wepToRestore.Replace(']', ',');
-                            wepToRestore = wepToRestore + "RESTORED:1]";
-                        }
-                    }
-                    else
-                    {
-                        wepToRestore = wepToRestore + "[ANTIBIND:3][RESTORED:1]";
-                    }
                     SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
                     logRestore(staff, accountId, accountName, character, wepToRestore);
                 }
@@ -353,23 +336,6 @@ namespace Iset
                     return "Invalid or missing weapon code!";
                 }
                 wepToRestore = wepcode;
-                if (wepToRestore.Contains("COMBINATION") && !wepToRestore.Contains("avatar"))
-                {
-                    if (!wepToRestore.Contains("ANTIBIND"))
-                    {
-                        wepToRestore.Replace(']', ',');
-                        wepToRestore = wepToRestore + "ANTIBIND:3]";
-                    }
-                    if (!wepToRestore.Contains("RESTORED"))
-                    {
-                        wepToRestore.Replace(']', ',');
-                        wepToRestore = wepToRestore + "RESTORED:1]";
-                    }
-                }
-                else
-                {
-                    wepToRestore = wepToRestore + "[ANTIBIND:3][RESTORED:1]";
-                }
                 if (!string.IsNullOrEmpty(wepToRestore))
                 {
                     SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
@@ -382,6 +348,118 @@ namespace Iset
             }
             Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore, staff, "forcerestoreweapon - " +character, wepToRestore);
             return "The weapon has been found and restored for " + character + "!";
+        }
+
+        public static Constructors.CharacterItem getItemDetails(string charactername, string itemcode, string enhancement)
+        {
+            Constructors.CharacterItem item = new Constructors.CharacterItem();
+            string characterid = UserFunctions.getCharacterIdFromName(charactername);
+            if (String.IsNullOrEmpty(characterid))
+            {
+                return null;
+            }
+            int enhancelevel = 0;
+            if (!int.TryParse(enhancement, out enhancelevel))
+            {
+                return null;
+            }
+            if (enhancelevel < 0 || enhancelevel > 15)
+            {
+                return null;
+            }
+            using (conn = new SqlConnection())
+            {
+                conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                string oString = "SELECT TOP 1 * FROM Item WHERE OwnerID = @CID AND ItemClass LIKE @ItemClass";
+                SqlCommand oCmd = new SqlCommand(oString, conn);
+                oCmd.Parameters.AddWithValue("@CID", characterid);
+                oCmd.Parameters.AddWithValue("@ItemClass", "'%" + itemcode + "%'");
+                conn.Open();
+                using (SqlDataReader oReader = oCmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        if (!string.IsNullOrEmpty(oReader["ItemClass"].ToString()))
+                        {
+                            item.ItemClass = oReader["ItemClass"].ToString();
+                        }
+                        if (!string.IsNullOrEmpty(oReader["ID"].ToString()))
+                        {
+                            item.ItemID = oReader["ID"].ToString();
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            using (conn = new SqlConnection())
+            {
+                conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                string oString = "SELECT * FROM ItemAttribute WHERE ItemID = @ItemID";
+                SqlCommand oCmd = new SqlCommand(oString, conn);
+                oCmd.Parameters.AddWithValue("@ItemID", item.ItemID);
+                conn.Open();
+                using (SqlDataReader oReader = oCmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        switch(oReader["Attribute"].ToString())
+                        {
+                            case "ANTIBIND":
+                                item.BindCount = oReader["Value"].ToString();
+                                break;
+                            case "COMBINATION":
+                                item.Combination = oReader["Value"].ToString();
+                                break;
+                            case "ENHANCE":
+                                item.Enhancement = oReader["Value"].ToString();
+                                break;
+                            case "LOOK":
+                                item.Look = oReader["Value"].ToString();
+                                break;
+                            case "PREFIX":
+                                item.Prefix = oReader["Value"].ToString();
+                                break;
+                            case "PS_0":
+                                item.PS0 = new Tuple<string, string, string>(oReader["Value"].ToString(), oReader["Arg"].ToString(), oReader["Arg2"].ToString());
+                                break;
+                            case "PS_1":
+                                item.PS1.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_2":
+                                item.PS2.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_3":
+                                item.PS3.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_4":
+                                item.PS4.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "SUFFIX":
+                                item.Suffix = oReader["Value"].ToString();
+                                break;
+                            case "QUALITY":
+                                item.Quality.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "RESTORED":
+                                if (oReader["Value"].ToString() == "1")
+                                {
+                                    item.Restored = true;
+                                }
+                                else
+                                {
+                                    item.Restored = false;
+                                }
+                                break;
+                            case "SPIRIT_INJECTION":
+                                item.Infusion.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            return item;
         }
 
         public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender, string staffname = "Iset")
@@ -413,22 +491,24 @@ namespace Iset
                 retmsg = retmsg + charactername;
             }
             string itemCode = itemtospawn;
-            if (itemCode.Contains("COMBINATION") && !itemCode.Contains("avatar"))
+            if (itemCode != "gold")
             {
-                if (!itemCode.Contains("ANTIBIND"))
+                if (itemCode.Contains("COMBINATION:"))
                 {
-                    itemCode.Replace(']', ',');
-                    itemCode = itemCode + "ANTIBIND:3]";
+                    if (!itemCode.Contains("ANTIBIND"))
+                    {
+                        itemCode = itemCode.Replace("]",",") + "ANTIBIND:3]";
+                    }
+                    if (!itemCode.Contains("RESTORED"))
+                    {
+                        itemCode = itemCode.Replace("]", ",") + "RESTORED:1]";
+                    }
                 }
-                if (!itemCode.Contains("RESTORED"))
+                else
                 {
-                    itemCode.Replace(']', ',');
-                    itemCode = itemCode + "RESTORED:1]";
+                    itemCode = itemCode + "[ANTIBIND:3][RESTORED:1]";
                 }
-            }
-            else
-            {
-                itemCode = itemCode + "[ANTIBIND:3][RESTORED:1]";
+                return itemCode;
             }
             try
             {
