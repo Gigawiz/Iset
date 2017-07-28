@@ -30,12 +30,12 @@ namespace Iset
                 SQLiteDataReader reader = command.ExecuteReader();
                 m_dbConnection.Open();
                 int rowCount = Convert.ToInt32(command.ExecuteScalar());
-                Logging.LogItem(rowCount.ToString());
+                Logging.OldLogItem(rowCount.ToString());
                 m_dbConnection.Close();
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return ret;
         }
@@ -85,6 +85,22 @@ namespace Iset
                     using (m_dbConnection = new SQLiteConnection("Data Source=iset.db3;Version=3;"))
                     {
                         string sql = "CREATE TABLE item_restores (discordStaff VARCHAR(50), accountID VARCHAR(50), accountName VARCHAR(50), characterName VARCHAR(50), itemCode VARCHAR(500), dateRestored TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
+                        SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+                        m_dbConnection.Open();
+                        command.ExecuteNonQuery();
+                        m_dbConnection.Close();
+                    }
+                    using (m_dbConnection = new SQLiteConnection("Data Source=iset.db3;Version=3;"))
+                    {
+                        string sql = "CREATE TABLE item_spawns (discordStaffName VARCHAR(50), characterName VARCHAR(50), itemCode VARCHAR(500), qty INT(100), dateSpawned TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
+                        SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+                        m_dbConnection.Open();
+                        command.ExecuteNonQuery();
+                        m_dbConnection.Close();
+                    }
+                    using (m_dbConnection = new SQLiteConnection("Data Source=iset.db3;Version=3;"))
+                    {
+                        string sql = "CREATE TABLE command_logs (discordStaffName VARCHAR(50), command VARCHAR(500), variables VARCHAR(500), dateRun TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
                         SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
                         m_dbConnection.Open();
                         command.ExecuteNonQuery();

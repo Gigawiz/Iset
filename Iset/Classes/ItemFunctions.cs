@@ -43,7 +43,7 @@ namespace Iset
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return ret;
         }
@@ -147,6 +147,29 @@ namespace Iset
             }
         }
 
+        public static void logSpawn(string staffname, string characterid, string charactername, string itemcode, string quantity)
+        {
+            try
+            {
+                using (m_dbConnection = new SQLiteConnection("Data Source=iset.db3;Version=3;"))
+                {
+                    string sql = "INSERT INTO item_spawns (discordStaffName,characterName,itemCode,qty) VALUES (@staffName,@characterName, @itemCode, @qty);";
+                    SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+                    command.Parameters.AddWithValue("@staffName", staffname);
+                    command.Parameters.AddWithValue("@characterName", charactername);
+                    command.Parameters.AddWithValue("@itemCode", itemcode);
+                    command.Parameters.AddWithValue("@qty", quantity);
+                    m_dbConnection.Open();
+                    command.ExecuteNonQuery();
+                    m_dbConnection.Close();
+                }
+            }
+            catch (SQLiteException ex)
+            {
+                Logging.OldLogItem(ex.Message);
+            }
+        }
+
         public static void logRestore(string staffname, string accountid, string accountname, string charactername, string itemcode)
         {
             try
@@ -167,7 +190,7 @@ namespace Iset
             }
             catch (SQLiteException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
         }
 
@@ -197,7 +220,7 @@ namespace Iset
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
             }
             return restoredItems;
         }
@@ -280,81 +303,239 @@ namespace Iset
             }
             catch (SqlException ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
                 return ex.Message;
             }
-            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore);
+            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore, staff, "restoreweapon - " +character, wepToRestore);
             return "The weapon has been found and restored for " + character + "!";
         }
 
-        public static string SendMailToAllOnline(string itemtospawn, int count, string mailsender)
+        public static string forceRestoreItem(string character, string wepcode, string staff)
+        //!restoreweapon <charactername> <enhancement level> <weapon type> [quality] [prefix] [suffix] [fusion]
         {
-            List<string> mailRecepients = MiscFunctions.onlinePlayers();
-            string mailTo = null;
-            int i = 0;
+            string charid = UserFunctions.getCharacterIdFromName(character);
+            string accountId = UserFunctions.getUserIdFromCharacterName(character);
+            string accountName = UserFunctions.getAccountNameFromID(accountId);
+            if (string.IsNullOrEmpty(charid))
+            {
+                return "Invalid character name!";
+            }
+            List<string> restoredItems = hasRestored(accountId);
+            int maxRestoredWeapons = 1;
+            int.TryParse(ini.IniReadValue("misc", "maxitemrestoresperaccount"), out maxRestoredWeapons);
+            if (restoredItems.Count() >= maxRestoredWeapons)
+            {
+                string retstr = "An item has allready been restored for " + character + "!";
+                return retstr;
+            }
+            string wepToRestore = null;
             try
             {
-                foreach (string user in mailRecepients)
+                if (string.IsNullOrEmpty(wepcode))
                 {
-                    string mailReciever = UserFunctions.getCharacterIdFromName(user);
+                    return "Invalid or missing weapon code!";
+                }
+                wepToRestore = wepcode;
+                if (!string.IsNullOrEmpty(wepToRestore))
+                {
+                    SendMail(character, wepToRestore, 1, "Here is your weapon restore. Please be warned, the next destruction of this weapon will be permanant! You now have 0 weapon/item restores available.", "BloodRedDawn Item Restoration");
+                    logRestore(staff, accountId, accountName, character, wepToRestore);
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            Logging.LogItem(character + " has had an item restored by " + staff + ". Item code: " + wepToRestore, staff, "forcerestoreweapon - " +character, wepToRestore);
+            return "The weapon has been found and restored for " + character + "!";
+        }
+
+        public static Constructors.CharacterItem getItemDetails(string charactername, string itemcode, string enhancement)
+        {
+            Constructors.CharacterItem item = new Constructors.CharacterItem();
+            string characterid = UserFunctions.getCharacterIdFromName(charactername);
+            if (String.IsNullOrEmpty(characterid))
+            {
+                return null;
+            }
+            int enhancelevel = 0;
+            if (!int.TryParse(enhancement, out enhancelevel))
+            {
+                return null;
+            }
+            if (enhancelevel < 0 || enhancelevel > 15)
+            {
+                return null;
+            }
+            using (conn = new SqlConnection())
+            {
+                conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                string oString = "SELECT TOP 1 * FROM Item WHERE OwnerID = @CID AND ItemClass LIKE @ItemClass";
+                SqlCommand oCmd = new SqlCommand(oString, conn);
+                oCmd.Parameters.AddWithValue("@CID", characterid);
+                oCmd.Parameters.AddWithValue("@ItemClass", "'%" + itemcode + "%'");
+                conn.Open();
+                using (SqlDataReader oReader = oCmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        if (!string.IsNullOrEmpty(oReader["ItemClass"].ToString()))
+                        {
+                            item.ItemClass = oReader["ItemClass"].ToString();
+                        }
+                        if (!string.IsNullOrEmpty(oReader["ID"].ToString()))
+                        {
+                            item.ItemID = oReader["ID"].ToString();
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            using (conn = new SqlConnection())
+            {
+                conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                string oString = "SELECT * FROM ItemAttribute WHERE ItemID = @ItemID";
+                SqlCommand oCmd = new SqlCommand(oString, conn);
+                oCmd.Parameters.AddWithValue("@ItemID", item.ItemID);
+                conn.Open();
+                using (SqlDataReader oReader = oCmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        switch(oReader["Attribute"].ToString())
+                        {
+                            case "ANTIBIND":
+                                item.BindCount = oReader["Value"].ToString();
+                                break;
+                            case "COMBINATION":
+                                item.Combination = oReader["Value"].ToString();
+                                break;
+                            case "ENHANCE":
+                                item.Enhancement = oReader["Value"].ToString();
+                                break;
+                            case "LOOK":
+                                item.Look = oReader["Value"].ToString();
+                                break;
+                            case "PREFIX":
+                                item.Prefix = oReader["Value"].ToString();
+                                break;
+                            case "PS_0":
+                                item.PS0 = new Tuple<string, string, string>(oReader["Value"].ToString(), oReader["Arg"].ToString(), oReader["Arg2"].ToString());
+                                break;
+                            case "PS_1":
+                                item.PS1.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_2":
+                                item.PS2.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_3":
+                                item.PS3.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "PS_4":
+                                item.PS4.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "SUFFIX":
+                                item.Suffix = oReader["Value"].ToString();
+                                break;
+                            case "QUALITY":
+                                item.Quality.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+                            case "RESTORED":
+                                if (oReader["Value"].ToString() == "1")
+                                {
+                                    item.Restored = true;
+                                }
+                                else
+                                {
+                                    item.Restored = false;
+                                }
+                                break;
+                            case "SPIRIT_INJECTION":
+                                item.Infusion.Add(oReader["Value"].ToString(), oReader["Arg"].ToString());
+                                break;
+
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            return item;
+        }
+
+        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender, string staffname = "Iset")
+        {
+            List<string> mailToList = null;
+            string retmsg = "The item has been sent to ";
+            if (charactername == "all")
+            {
+                mailToList = UserFunctions.playerList("id", "all");
+                if (mailToList.Count() <=0 )
+                {
+                    return "error getting players!";
+                }
+                retmsg = retmsg + "all players (" + mailToList.Count().ToString() + ")";
+            }
+            else if (charactername == "allonline")
+            {
+                mailToList = UserFunctions.playerList("id", "online");
+                if (mailToList.Count() <=0)
+                {
+                    return "There are no players online!";
+                }
+                retmsg = retmsg + "all online players (" + mailToList.Count().ToString() + ")";
+            }
+            else
+            {
+                mailToList = new List<string>();
+                mailToList.Add(UserFunctions.getCharacterIdFromName(charactername));
+                retmsg = retmsg + charactername;
+            }
+            string itemCode = itemtospawn;
+            if (itemCode != "gold")
+            {
+                if (itemCode.Contains("COMBINATION:"))
+                {
+                    if (!itemCode.Contains("ANTIBIND"))
+                    {
+                        itemCode = itemCode.Replace("]",",") + "ANTIBIND:3]";
+                    }
+                    if (!itemCode.Contains("RESTORED"))
+                    {
+                        itemCode = itemCode.Replace("]", ",") + "RESTORED:1]";
+                    }
+                }
+                else
+                {
+                    itemCode = itemCode + "[ANTIBIND:3][RESTORED:1]";
+                }
+            }
+            try
+            {
+                foreach (string recipient in mailToList)
+                {
                     using (conn = new SqlConnection())
                     {
                         conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                        string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
+                        string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 1, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
                         SqlCommand oCmd = new SqlCommand(oString, conn);
-                        oCmd.Parameters.AddWithValue("@CID", mailReciever);
-                        oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
+                        oCmd.Parameters.AddWithValue("@CID", recipient);
+                        oCmd.Parameters.AddWithValue("@ItemClassEx", itemCode);
                         oCmd.Parameters.AddWithValue("@Count", count);
-                        oCmd.Parameters.AddWithValue("@MailContent", "Here is the item you requested from " + mailsender);
-                        oCmd.Parameters.AddWithValue("@MailTitle", "From Iset and " + mailsender);
+                        oCmd.Parameters.AddWithValue("@MailContent", mailcontent);
+                        oCmd.Parameters.AddWithValue("@MailTitle", mailsender);
                         conn.Open();
                         oCmd.ExecuteNonQuery();
                         conn.Close();
                     }
-                    if (i == 0)
-                    {
-                        mailTo = user;
-                    }
-                    else
-                    {
-                        mailTo = mailTo + ", " + user;
-                    }
-                    i++;
-                }
-
-                return "The items have been sent to " + mailTo + "! They will need to relog or run a quest to see the mail!";
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }
-
-        public static string SendMail(string charactername, string itemtospawn, int count, string mailcontent, string mailsender)
-        {
-            string characterId = UserFunctions.getCharacterIdFromName(charactername);
-            try
-            {
-                using (conn = new SqlConnection())
-                {
-                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "INSERT INTO QueuedItem (CID, ItemClassEx, IsCharacterBinded, Count, MailContent, MailTitle, Color1, Color2, Color3, ReducedDurability, MaxDurabilityBonus)  " + "VALUES (@CID, @ItemClassEx, 0, @Count, @MailContent, @MailTitle,-1 ,-1 ,-1 ,0 ,0)";
-                    SqlCommand oCmd = new SqlCommand(oString, conn);
-                    oCmd.Parameters.AddWithValue("@CID", characterId);
-                    oCmd.Parameters.AddWithValue("@ItemClassEx", itemtospawn);
-                    oCmd.Parameters.AddWithValue("@Count", count);
-                    oCmd.Parameters.AddWithValue("@MailContent", mailcontent);
-                    oCmd.Parameters.AddWithValue("@MailTitle", mailsender);
-                    conn.Open();
-                    oCmd.ExecuteNonQuery();
-                    conn.Close();
-                    return "The item has been sent to " + charactername + "! They will need to relog or run a quest to see the mail!";
+                    logSpawn(staffname.Replace("()", ""), recipient, charactername, itemCode, count.ToString());
                 }
             }
             catch (Exception ex)
             {
                 return ex.Message;
             }
+            retmsg = retmsg + "! They will need to relog or run a quest to see the mail!";
+            return retmsg;
         }
     }
 }

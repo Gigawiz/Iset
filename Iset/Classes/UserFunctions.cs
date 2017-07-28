@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -41,7 +42,6 @@ namespace Iset
                         conn.Close();
                     }
                 }
-                Logging.LogItem("Found characters. Checking Accounts.");
                 List<string> accountIds = new List<string>();
                 using (conn = new SqlConnection())
                 {
@@ -95,7 +95,83 @@ namespace Iset
             }
             catch (Exception ex)
             {
-                Logging.LogItem(ex.Message);
+                Logging.OldLogItem(ex.Message);
+            }
+            return characterNames;
+        }
+
+        public static string getCharacterNameFromID(string characterid)
+        {
+            string username = null;
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "Select * from CharacterInfo where ID=@fId";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@fId", characterid);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (!string.IsNullOrEmpty(oReader["Name"].ToString()))
+                            {
+                                username = oReader["Name"].ToString();
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+            return username;
+        }
+
+        public static List<string> playerList(string returnDataType, string searchType = "online", bool skipStorageChars = false)
+        {
+            List<string> characterNames = new List<string>();
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "SELECT * FROM CharacterInfo WHERE Status = 0";
+                    if (searchType == "online")
+                    {
+                        oString = oString + " AND IsConnected=1";
+                    }
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    conn.Open();
+                    using (SqlDataReader oReader = oCmd.ExecuteReader())
+                    {
+                        while (oReader.Read())
+                        {
+                            if (returnDataType == "id")
+                            {
+                                characterNames.Add(oReader["ID"].ToString());
+                            }
+                            else if (returnDataType == "name")
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
+                            else
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
+                        }
+                        conn.Close();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                characterNames.Add("Error in query!");
+                characterNames.Add(ex.Message);
             }
             return characterNames;
         }
@@ -113,7 +189,7 @@ namespace Iset
                 using (conn = new SqlConnection())
                 {
                     conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
-                    string oString = "SELECT * FROM CharacterInfo WHERE UID=@fName";
+                    string oString = "SELECT * FROM CharacterInfo WHERE UID=@fName ORDER BY STATUS ASC";
                     SqlCommand oCmd = new SqlCommand(oString, conn);
                     oCmd.Parameters.AddWithValue("@fName", submittedCharacterAccID);
                     conn.Open();
@@ -121,7 +197,16 @@ namespace Iset
                     {
                         while (oReader.Read())
                         {
-                            characterNames.Add(oReader["Name"].ToString());
+                            int statusCode = 0;
+                            int.TryParse(oReader["Status"].ToString(), out statusCode);
+                            if (statusCode > 0)
+                            {
+                                characterNames.Add("~~" + oReader["Name"].ToString() + "~~");
+                            }
+                            else
+                            {
+                                characterNames.Add(oReader["Name"].ToString());
+                            }
                         }
                         conn.Close();
                     }
@@ -134,6 +219,114 @@ namespace Iset
             }
             return characterNames;
         }
+
+        public static string generateProfile(string charactername)
+        {
+            string charid = getCharacterIdFromName(charactername);
+            if (string.IsNullOrEmpty(charid))
+            {
+                return "Invalid Character Name";
+            }
+            string str1 = charactername;
+            string connectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+            string str2 = string.Empty + "SELECT [ID] ,[UID] ,[CharacterSN] ,[Name] ,[Class] ,[Level] ,[Exp],[STR],[DEX],[INT],[WILL],[LUCK],[HP],[STAMINA],[PlayTime],[SelectedTitle],[AP],[TotalUsedAP],[Status],[Quote],[IsConnected],[CreateTime],[FreeMatchWinCount],[FreeMatchLoseCount],[TodayPlayTime],[Channel] FROM[heroes].[dbo].[CharacterInfo] WHERE Name = '" + str1 + "' ";
+            using (SqlConnection sqlConnection1 = new SqlConnection(connectionString))
+            {
+                using (SqlCommand sqlCommand1 = new SqlCommand())
+                {
+                    SqlCommand sqlCommand2 = sqlCommand1;
+                    SqlConnection sqlConnection2 = sqlConnection1;
+                    sqlCommand2.Connection = sqlConnection2;
+                    int num = 1;
+                    sqlCommand2.CommandType = (CommandType)num;
+                    string str3 = str2;
+                    sqlCommand2.CommandText = str3;
+                    sqlConnection1.Open();
+                    SqlDataReader sqlDataReader = sqlCommand2.ExecuteReader();
+                    try
+                    {
+                        while (sqlDataReader.Read())
+                        {
+                            string str4 = sqlDataReader["ID"].ToString();
+                            string str5 = sqlDataReader["UID"].ToString();
+                            string str6 = sqlDataReader["CharacterSN"].ToString();
+                            string str7 = sqlDataReader["Name"].ToString();
+                            string str8 = sqlDataReader["Class"].ToString();
+                            string str9 = sqlDataReader["Level"].ToString();
+                            string str10 = sqlDataReader["Exp"].ToString();
+                            string str11 = sqlDataReader["STR"].ToString();
+                            string str12 = sqlDataReader["DEX"].ToString();
+                            string str13 = sqlDataReader["INT"].ToString();
+                            string str14 = sqlDataReader["WILL"].ToString();
+                            string str15 = sqlDataReader["LUCK"].ToString();
+                            string str16 = sqlDataReader["HP"].ToString();
+                            string str17 = sqlDataReader["STAMINA"].ToString();
+                            string str18 = sqlDataReader["PlayTime"].ToString();
+                            string str19 = sqlDataReader["SelectedTitle"].ToString();
+                            string str20 = sqlDataReader["AP"].ToString();
+                            string str21 = sqlDataReader["TotalUsedAP"].ToString();
+                            string str22 = sqlDataReader["Quote"].ToString();
+                            string str23 = sqlDataReader["IsConnected"].ToString();
+                            string str24 = sqlDataReader["CreateTime"].ToString();
+                            string str25 = sqlDataReader["TodayPlayTime"].ToString();
+                            string str26 = sqlDataReader["Channel"].ToString();
+                            string str27 = !(str23 == "True") ? "Offline" : "Online";
+                            sqlConnection1.Close();
+                            return "```Character Info: \nID: " + str4 + "\nUID: " + str5 + "\nCharacterSN: " + str6 + "\nName: " + str7 + "\nClass: " + str8 + "\nLevel: " + str9 + "\nExp: " + str10 + "\nSTR: " + str11 + "\nDEX: " + str12 + "\nINT: " + str13 + "\nWILL: " + str14 + "\nLUCK: " + str15 + "\nHP: " + str16 + "\nSTAMINA: " + str17 + "\nPlayTime: " + str18 + "\nSelectedTitle: " + str19 + "\nAP: " + str20 + "\nTotalUsedAP: " + str21 + "\nQuote: " + str22 + "\nStatus: " + str27 + "\nCreateTime: " + str24 + "\nTodayPlayTime: " + str25 + "\nChannel: " + str26 + "\n```";
+                        }
+                    }
+                    catch (SqlException ex)
+                    {
+                        return ex.Message;
+                    }
+                }
+                return "error";
+            }
+        }
+
+        public static string setTrans(string character, string transtype)
+        {
+            string charnum = getCharacterIdFromName(character);
+            if (string.IsNullOrEmpty(charnum))
+            {
+                return "Invalid character name!";
+            }
+            int num;
+            string ret = character + " is now a level 40 Paladin";
+            if (transtype.ToUpper() == "PALADIN")
+            {
+                num = 0;
+            }
+            else if (transtype.ToUpper() == "DARK KNIGHT")
+            {
+                num = 1;
+                ret = character + " is now a level 40 Dark Knight";
+            }
+            else
+            {
+                return "Invalid Trans type given!";
+            }
+            try
+            {
+                using (conn = new SqlConnection())
+                {
+                    conn.ConnectionString = "Server=" + ini.IniReadValue("mssql", "ipandport") + "; Database=heroes; User Id=" + ini.IniReadValue("mssql", "username") + "; password=" + ini.IniReadValue("mssql", "password");
+                    string oString = "INSERT INTO [heroes].[dbo].[Vocation] ([CID] ,[VocationClass] ,[VocationLevel] ,[VocationExp] ,[LastTransform]) VALUES (@charNum,@transtype,40,0,GETDATE())";
+                    SqlCommand oCmd = new SqlCommand(oString, conn);
+                    oCmd.Parameters.AddWithValue("@charNum", charnum);
+                    oCmd.Parameters.AddWithValue("@transtype", num);
+                    conn.Open();
+                    oCmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+            }
+            catch (SqlException ex)
+            {
+                return ex.Message;
+            }
+            return ret;
+        }
+
 
         public static string getCharacterIdFromName(string characterName)
         {
@@ -151,7 +344,7 @@ namespace Iset
                     {
                         while (oReader.Read())
                         {
-                            if (!string.IsNullOrEmpty(oReader["UID"].ToString()))
+                            if (!string.IsNullOrEmpty(oReader["ID"].ToString()))
                             {
                                 userid = oReader["ID"].ToString();
                             }
@@ -329,6 +522,11 @@ namespace Iset
             if (String.IsNullOrEmpty(verifyChar))
             {
                 return "That is not a valid character name!";
+            }
+            string nameExists = getUserIdFromCharacterName(newname);
+            if (!string.IsNullOrEmpty(nameExists))
+            {
+                return "Character name is already taken!";
             }
             try
             {
