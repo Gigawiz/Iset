@@ -2,12 +2,13 @@
 package bot
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"strings"
 
+	"bloodreddawn.com/IsetGo/config"
+	"bloodreddawn.com/IsetGo/logging"
 	"bloodreddawn.com/IsetGo/LoginServer"
 	"bloodreddawn.com/IsetGo/Vindictus"
 	"github.com/bwmarrin/discordgo"
@@ -15,14 +16,19 @@ import (
 
 var (
 	BotToken string
-	DBIP     string
-	DBPort   int
-	DBUser   string
-	DBPass   string
+	UseLoginServer bool
+	LogToConsole bool
 )
+
+func init() {
+	BotToken = config.BotToken
+	UseLoginServer = config.UseLoginServer
+	LogToConsole = config.LogToConsole
+}
 
 func Run() {
 	// Create new Discord Session
+	logging.Log("Creating new Discord Bot Instance...");
 	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		log.Fatal(err)
@@ -30,17 +36,19 @@ func Run() {
 
 	// Add event handler
 	discord.AddHandler(newMessage)
-
+	logging.Log("Opening session...")
 	// Open session
 	discord.Open()
 	defer discord.Close()
-
-	//launch NMServer too :D
-	LoginServer.LoginStart()
-	fmt.Println("Login Server running...")
-
+	
+	if (UseLoginServer) {
+		//launch NMServer too :D
+		logging.Log("Login server enabled.... Launching....")
+		LoginServer.LoginStart()
+		logging.Log("Login Server Running!")
+	}
 	// Run until code is terminated
-	fmt.Println("Bot running...")
+	logging.Log("Bot Running!")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
@@ -77,13 +85,10 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 			}
 		}
 	}
+	logging.Log("Command '" + message.Content + "' run by " + message.Author.Username)
 }
 
 func getData(command string) string {
-	Vindictus.DBIP = DBIP
-	Vindictus.DBPort = DBPort
-	Vindictus.DBUser = DBUser
-	Vindictus.DBPass = DBPass
 	var cmdCln = strings.ReplaceAll(command, "$vindictus ", "")
 	return Vindictus.ProcessCmd(cmdCln)
 }

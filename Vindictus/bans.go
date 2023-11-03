@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 	_ "github.com/denisenkom/go-mssqldb"
+	//"bloodreddawn.com/IsetGo/logging"
 )
 
 var (

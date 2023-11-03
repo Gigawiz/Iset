@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"bloodreddawn.com/IsetGo/config"
 )
 
 type connectionHandler func(net.Conn)
@@ -67,9 +68,9 @@ func StartReadPacket(conn net.Conn) bool {
 	return true
 }
 
-var pserver = flag.Bool("pserver", true, "a bool")
-var server = flag.String("server", "http://127.0.0.1/api/login", "a string")
-var port = flag.Int("port", 47611, "an int")
+var pserver = flag.Bool("pserver", config.PServer, "a bool")
+var server = flag.String("server", config.PServerURL, "a string")
+var port = flag.Int("port", config.PServerPort, "an int")
 
 func LoginStart() {
 	flag.Parse()

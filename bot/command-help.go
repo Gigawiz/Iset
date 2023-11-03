@@ -2,6 +2,7 @@ package bot
 
 import (
 	"github.com/bwmarrin/discordgo"
+	//"bloodreddawn.com/IsetGo/logging"
 	"strings"
 )
 
