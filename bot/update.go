@@ -28,13 +28,24 @@ func getWebVersion(url string) (string, error) {
     return string(data), nil
 }
 
-func CheckUpdate() {
+func updateAvail() bool {
 	webVers, _ := getWebVersion(config.BotUpdateUrl)
-	thisVers := config.BotVersion
-	_ = thisVers
 	webParts := strings.Split(webVers, ".")
 
+	thisVers := config.BotVersion
+	thisParts := strings.Split(thisVers, ".")
+	
 	for index, line := range webParts {
-        fmt.Printf("Line %d: %s\n", index, line)
+		if (line != thisParts[index]) {
+			return true
+		}
     }
+	return false
+}
+
+func CheckUpdate() string {
+	if (updateAvail()) {
+		return "\n An Update is available and can be downloaded from " + config.GithubLatestUrl
+	}
+	return "\n This is the most current release - no need to update!"
 }

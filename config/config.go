@@ -17,6 +17,7 @@ var (
 	BotPrefix string
 	BotVersion string
 	BotUpdateUrl string
+	GithubLatestUrl string
 	UseUnflip bool
 	DBIP     string
 	DBPort   string
@@ -54,8 +55,9 @@ func loadSettings() {
 	BotPrefix = section.Key("prefix").String()
 	boolVal, err = strconv.ParseBool(section.Key("use-unflip").String())
 	UseUnflip = boolVal
-	BotVersion = "2.0.14"
+	BotVersion = "2.0.15"
 	BotUpdateUrl = "https://raw.githubusercontent.com/Gigawiz/Iset/master/bot/update.dat"
+	GithubLatestUrl = "https://github.com/Gigawiz/Iset/releases/latest"
 	
 	section = inidata.Section("mssql.database")  
 	DBIP = section.Key("host").String()
