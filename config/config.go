@@ -17,7 +17,7 @@ var (
 	BotPrefix string
 	UseUnflip bool
 	DBIP     string
-	DBPort   int
+	DBPort   string
 	DBUser   string
 	DBPass   string
 	LogToConsole bool
@@ -55,8 +55,7 @@ func loadSettings() {
 	
 	section = inidata.Section("mssql.database")  
 	DBIP = section.Key("host").String()
-	port, err := strconv.Atoi(section.Key("port").String())
-	DBPort = port
+	DBPort = section.Key("port").String()
 	DBUser = section.Key("username").String()
 	DBPass = section.Key("password").String()
 	
@@ -67,7 +66,7 @@ func loadSettings() {
 	boolVal, err = strconv.ParseBool(section.Key("pserver").String())
 	PServer = boolVal
 	PServerURL = section.Key("server").String()
-	port, err = strconv.Atoi(section.Key("port").String())
+	port, err := strconv.Atoi(section.Key("port").String())
 	PServerPort = port
 }
 

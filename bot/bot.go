@@ -93,7 +93,9 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 			}
 			if (dmsgt == "scrollembed") {
 				discord.ChannelMessageSendComplex(message.ChannelID, Vindictus.ScrollEmbed(data))
-			} else {
+			} else if (dmsgt == "banembed") {
+				discord.ChannelMessageSendComplex(message.ChannelID, Vindictus.BanEmbed(data))
+			}	else {
 				discord.ChannelMessageSend(message.ChannelID, data)
 			}
 	}
