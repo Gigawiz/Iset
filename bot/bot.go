@@ -76,6 +76,10 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 	
+	if (!strings.Contains(message.Content[0:len(BotPrefix)], BotPrefix)) {
+		return
+	}
+	
 	var msgContent = strings.ReplaceAll(message.Content, BotPrefix + " ", "")
 
 	// Respond to messages
@@ -100,4 +104,11 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 			}
 	}
 	logging.Log("Command '" + message.Content + "' run by " + message.Author.Username)
+}
+
+func firstN(s string, n int) string {
+     if len(s) > n {
+          return s[:n]
+     }
+     return s
 }
