@@ -35,6 +35,8 @@ func ProcessCmd(command string) (string, string) {
 			ret = FindScroll(command)
 		case strings.Contains(command, "banlist"):
 			ret = ListBans(setUrl("heroes"))
+		case strings.Contains(command, "infusions"):
+			ret = "```Infusions: \nATK \nPVP_ATK \nMATK \nPVP_MATK \nBalance \nCritical \nATK_Speed \nATK_Range \nATK_Absolute \nDEF \nPVP_DEF \nDEF_Absolute \nDEF_Destroyed \nSTR \nDEX \nINT \nWILL \nLUCK \nHP \nSTAMINA \nRes_Critical \nTOWN_SPEED \n```"
 	}
 	return dmsgt, ret
 }

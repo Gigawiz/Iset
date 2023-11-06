@@ -15,6 +15,7 @@ import (
 var (
 	BotToken string
 	BotPrefix string
+	UseUnflip bool
 	DBIP     string
 	DBPort   int
 	DBUser   string
@@ -49,6 +50,8 @@ func loadSettings() {
 	section = inidata.Section("discord.bot")  
 	BotToken = section.Key("token").String()
 	BotPrefix = section.Key("prefix").String()
+	boolVal, err = strconv.ParseBool(section.Key("use-unflip").String())
+	UseUnflip = boolVal
 	
 	section = inidata.Section("mssql.database")  
 	DBIP = section.Key("host").String()

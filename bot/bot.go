@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-
+	
 	"bloodreddawn.com/IsetGo/config"
 	"bloodreddawn.com/IsetGo/logging"
 	"bloodreddawn.com/IsetGo/LoginServer"
@@ -17,6 +17,7 @@ import (
 var (
 	BotToken string
 	BotPrefix string
+	UseUnflip bool
 	UseLoginServer bool
 	LogToConsole bool
 )
@@ -24,6 +25,7 @@ var (
 func init() {
 	BotToken = config.BotToken
 	BotPrefix = config.BotPrefix
+	UseUnflip = config.UseUnflip
 	UseLoginServer = config.UseLoginServer
 	LogToConsole = config.LogToConsole
 }
@@ -64,6 +66,12 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 	
+	if (strings.Contains(message.Content, "(╯°□°）╯︵ ┻━┻") || strings.Contains(message.Content, "(╯°□°)")) {
+		if (UseUnflip) {
+			discord.ChannelMessageSend(message.ChannelID, Unflip())
+		}
+	}
+	
 	if (!strings.Contains(message.Content, BotPrefix)) {
 		return
 	}
@@ -72,22 +80,22 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 
 	// Respond to messages
 	switch {
-	case strings.Contains(msgContent, "hello"):
-		discord.ChannelMessageSend(message.ChannelID, "Hi there!")
-	case strings.Contains(msgContent, "help"):
-		commandHelp := displayHelp(msgContent)
-		discord.ChannelMessageSendComplex(message.ChannelID, commandHelp)
-	default:
-		dmsgt, data := Vindictus.ProcessCmd(msgContent)
-		if (data == "" || data == "error") {
-			discord.ChannelMessageSend(message.ChannelID, "An error has occoured!")
-			return
-		}
-		if (dmsgt == "scrollembed") {
-			discord.ChannelMessageSendComplex(message.ChannelID, Vindictus.ScrollEmbed(data))
-		} else {
-			discord.ChannelMessageSend(message.ChannelID, data)
-		}
+		case strings.Contains(msgContent, "hello"):
+			discord.ChannelMessageSend(message.ChannelID, "Hi there!")
+		case strings.Contains(msgContent, "help"):
+			commandHelp := displayHelp(msgContent)
+			discord.ChannelMessageSendComplex(message.ChannelID, commandHelp)
+		default:
+			dmsgt, data := Vindictus.ProcessCmd(msgContent)
+			if (data == "" || data == "error") {
+				discord.ChannelMessageSend(message.ChannelID, "An error has occoured!")
+				return
+			}
+			if (dmsgt == "scrollembed") {
+				discord.ChannelMessageSendComplex(message.ChannelID, Vindictus.ScrollEmbed(data))
+			} else {
+				discord.ChannelMessageSend(message.ChannelID, data)
+			}
 	}
 	logging.Log("Command '" + message.Content + "' run by " + message.Author.Username)
 }
