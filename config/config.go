@@ -18,13 +18,19 @@ var (
 	BotVersion string
 	BotUpdateUrl string
 	GithubLatestUrl string
+	AutoDLUpdate bool
+	UpdateDLUrl string
+	
 	UseUnflip bool
 	DBIP     string
 	DBPort   string
 	DBUser   string
 	DBPass   string
+	
 	LogToConsole bool
+	
 	LocalizationFolder string
+	
 	UseLoginServer bool
 	PServer bool
 	PServerURL string
@@ -55,9 +61,14 @@ func loadSettings() {
 	BotPrefix = section.Key("prefix").String()
 	boolVal, err = strconv.ParseBool(section.Key("use-unflip").String())
 	UseUnflip = boolVal
-	BotVersion = "2.0.15"
+	BotVersion = "2.0.16"
 	BotUpdateUrl = "https://raw.githubusercontent.com/Gigawiz/Iset/master/bot/update.dat"
 	GithubLatestUrl = "https://github.com/Gigawiz/Iset/releases/latest"
+	
+	boolVal, err = strconv.ParseBool(section.Key("auto-download-updates").String())
+	AutoDLUpdate = boolVal
+	
+	UpdateDLUrl = "https://github.com/Gigawiz/Iset/releases/latest/download/Iset."
 	
 	section = inidata.Section("mssql.database")  
 	DBIP = section.Key("host").String()
