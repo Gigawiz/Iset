@@ -31,7 +31,9 @@ func ProcessCmd(command string) (string, string) {
 			return dmsgt, ret
 		case strings.Contains(command, "reset2ndary"):
 			ret = "Secondary password should be reset! Please contact an admin if you continue to have issues!"
-			ResetSecondary("gigawiz")
+			if (!ResetSecondary(command)) {
+				ret = "Failed to reset secondary password! Please ensure you have entered the correct username. If this issue persists, please contact a staff member!"
+			}
 			return dmsgt, ret
 		default:
 			return dmsgt, ret
