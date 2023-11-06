@@ -17,6 +17,7 @@ import (
 var (
 	BotToken string
 	BotPrefix string
+	BotVersion string
 	UseUnflip bool
 	UseLoginServer bool
 	LogToConsole bool
@@ -25,6 +26,7 @@ var (
 func init() {
 	BotToken = config.BotToken
 	BotPrefix = config.BotPrefix
+	BotVersion = config.BotVersion
 	UseUnflip = config.UseUnflip
 	UseLoginServer = config.UseLoginServer
 	LogToConsole = config.LogToConsole
@@ -86,6 +88,9 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 	switch {
 		case strings.Contains(msgContent, "hello"):
 			discord.ChannelMessageSend(message.ChannelID, "Hi there!")
+		case strings.Contains(msgContent, "version"):
+			discord.ChannelMessageSend(message.ChannelID, "I am currently running on Version " + BotVersion + "!")
+			CheckUpdate()
 		case strings.Contains(msgContent, "help"):
 			commandHelp := displayHelp(msgContent)
 			discord.ChannelMessageSendComplex(message.ChannelID, commandHelp)
