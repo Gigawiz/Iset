@@ -3,6 +3,7 @@ module bloodreddawn.com/IsetGo
 go 1.16
 
 require (
+	github.com/antchfx/xmlquery v1.3.18 // indirect
 	github.com/bwmarrin/discordgo v0.27.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.12.3 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect

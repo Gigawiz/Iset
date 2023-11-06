@@ -26,17 +26,15 @@ func TestFunc() string {
 	return retstr
 }
 
-func ProcessCmd(command string) string {
+func ProcessCmd(command string) (string, string) {
 	ret := "The command you seek does not seem to exist in the Royal Libraries...."
-	var cmdCln = strings.ReplaceAll(command, "$vindictus ", "")
-	fmt.Println("Command: " + cmdCln)
+	dmsgt := "default"
 	switch {
-		case strings.Contains(cmdCln, "enchants"):
-			ret = getEnchants()
-		case strings.Contains(cmdCln, "scroll"):
-			ret = translateEnchant(strings.ReplaceAll(cmdCln, "scroll ", ""))
-		case strings.Contains(cmdCln, "banlist"):
+		case strings.Contains(command, "scroll"):
+			dmsgt = "scrollembed"
+			ret = FindScroll(command)
+		case strings.Contains(command, "banlist"):
 			ret = ListBans(setUrl("heroes"))
 	}
-	return ret
+	return dmsgt, ret
 }

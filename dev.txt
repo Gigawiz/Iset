@@ -1,0 +1,4 @@
+https://github.com/Gigawiz/Iset
+https://pkg.go.dev/github.com/antchfx/xmlquery#section-readme
+https://github.com/antchfx/xmlquery
+https://github.com/antchfx/xmlquery/blob/master/books.xml

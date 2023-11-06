@@ -14,6 +14,7 @@ import (
 
 var (
 	BotToken string
+	BotPrefix string
 	DBIP     string
 	DBPort   int
 	DBUser   string
@@ -47,7 +48,7 @@ func loadSettings() {
 	
 	section = inidata.Section("discord.bot")  
 	BotToken = section.Key("token").String()
-	
+	BotPrefix = section.Key("prefix").String()
 	
 	section = inidata.Section("mssql.database")  
 	DBIP = section.Key("host").String()

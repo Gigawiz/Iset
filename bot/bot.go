@@ -16,12 +16,14 @@ import (
 
 var (
 	BotToken string
+	BotPrefix string
 	UseLoginServer bool
 	LogToConsole bool
 )
 
 func init() {
 	BotToken = config.BotToken
+	BotPrefix = config.BotPrefix
 	UseLoginServer = config.UseLoginServer
 	LogToConsole = config.LogToConsole
 }
@@ -61,34 +63,31 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 	if message.Author.ID == discord.State.User.ID {
 		return
 	}
-	//discord.ChannelMessageSend(message.ChannelID, "You Said: " + message.Content)
+	
+	if (!strings.Contains(message.Content, BotPrefix)) {
+		return
+	}
+	
+	var msgContent = strings.ReplaceAll(message.Content, BotPrefix + " ", "")
 
 	// Respond to messages
 	switch {
-	case strings.Contains(message.Content, "$hello"):
+	case strings.Contains(msgContent, "hello"):
 		discord.ChannelMessageSend(message.ChannelID, "Hi there!")
-	case strings.Contains(message.Content, "$help"):
-		commandHelp := displayHelp(message.Content)
+	case strings.Contains(msgContent, "help"):
+		commandHelp := displayHelp(msgContent)
 		discord.ChannelMessageSendComplex(message.ChannelID, commandHelp)
-	case strings.Contains(message.Content, "$vindictus"):
-		var data = getData(message.Content)
-		if (data == "") {
-			data = "That doesn't appear to exist!"
-			discord.ChannelMessageSend(message.ChannelID, data)
+	default:
+		dmsgt, data := Vindictus.ProcessCmd(msgContent)
+		if (data == "" || data == "error") {
+			discord.ChannelMessageSend(message.ChannelID, "An error has occoured!")
+			return
+		}
+		if (dmsgt == "scrollembed") {
+			discord.ChannelMessageSendComplex(message.ChannelID, Vindictus.ScrollEmbed(data))
 		} else {
-			if (strings.Contains(message.Content, "scroll")) {
-				var cmdCln = strings.ReplaceAll(message.Content, "$vindictus ", "")
-				embedScroll := scrollEmbed(strings.ReplaceAll(cmdCln, "scroll ", ""), data)
-				discord.ChannelMessageSendComplex(message.ChannelID, embedScroll)
-			} else {
-				discord.ChannelMessageSend(message.ChannelID, data)
-			}
+			discord.ChannelMessageSend(message.ChannelID, data)
 		}
 	}
 	logging.Log("Command '" + message.Content + "' run by " + message.Author.Username)
-}
-
-func getData(command string) string {
-	var cmdCln = strings.ReplaceAll(command, "$vindictus ", "")
-	return Vindictus.ProcessCmd(cmdCln)
 }

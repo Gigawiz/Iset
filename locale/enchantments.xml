@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<enchantments>
+   <!-- book list-->
+   <scroll id='valor'>
+	  <title>Valor</title>
+      <type>Suffix</type>
+	  <equipment>weapon</equipment>
+      <rank>A</rank>
+      <spwncode>enchant_scroll[SUFFIX:valor]</spwncode>
+      <description>Balance +5!!Attack Speed +4!!ATT +130!!M. ATT +119</description>
+   </scroll>
+   <scroll id='well-balanced'>
+	  <title>Well-Balanced</title>
+      <type>Prefix</type>
+	  <equipment>Armor</equipment>
+      <rank>8</rank>
+      <spwncode>enchant_scroll[PREFIX:balanced]</spwncode>
+      <description>+2 Attack Speed!!+1% Critical Rate!!-1% Critical Resistance!!+1 Balance</description>
+   </scroll>
+</enchantments>
