@@ -61,7 +61,7 @@ func loadSettings() {
 	BotPrefix = section.Key("prefix").String()
 	boolVal, err = strconv.ParseBool(section.Key("use-unflip").String())
 	UseUnflip = boolVal
-	BotVersion = "2.0.16"
+	BotVersion = "2.0.17"
 	BotUpdateUrl = "https://raw.githubusercontent.com/Gigawiz/Iset/master/bot/update.dat"
 	GithubLatestUrl = "https://github.com/Gigawiz/Iset/releases/latest"
 	
