@@ -15,7 +15,7 @@ Been working hard on porting all of Iset 1.0's features, here's what is working 
 - Permissions system, decide what discord users can run what commands, or give them the "all" permission and let them run wild!
 - Finished porting all functions from ItemFunctions.cs
 
-### Commands:
+## Commands:
 - Online : List online players
   - Syntax: $iset online
 - FindAlts : List all characters that belong to the same account as the given character name
@@ -52,6 +52,21 @@ Been working hard on porting all of Iset 1.0's features, here's what is working 
   - Syntax: $iset reset2ndary [character name]
 
 
+## Global commands
+- Hello : Responds with Hello!
+  - Syntax: $iset hello
+- AddPerm : Add permission to a discord user
+  - Syntax: $iset addperm [discord user id] [command]
+  - the permission string is the command (ex: scroll would give permission to use $iset scroll). 
+  - Use the all keyword to give all permissions ( $iset addperm [discord user id] all)
+- RemovePerm : Remove permission from a specified user
+  - Syntax: $iset removeperm [discord user id] [command]
+  - the permission string is the command (ex: scroll would remove permission to use $iset scroll).
+- Version : Responds with the current version of the running program
+  - Syntax: $iset version
+  - Can auto download latest update, or just link to latest update
+- Help : A placeholder command for testing embeds. Not really useful, but hey, the command exists!
+  - Syntax: $iset help
 ### Conclusion
 
 Keep an eye to this if you're interested in using Iset for your private server, I plan to keep adding features as often as I can, with the hope of having a stable release within the quarter!
