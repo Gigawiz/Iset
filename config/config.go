@@ -61,7 +61,7 @@ func loadSettings() {
 	BotPrefix = section.Key("prefix").String()
 	boolVal, err = strconv.ParseBool(section.Key("use-unflip").String())
 	UseUnflip = boolVal
-	BotVersion = "2.0.17"
+	BotVersion = "2.0.18"
 	BotUpdateUrl = "https://raw.githubusercontent.com/Gigawiz/Iset/master/bot/update.dat"
 	GithubLatestUrl = "https://github.com/Gigawiz/Iset/releases/latest"
 	
@@ -85,6 +85,16 @@ func loadSettings() {
 	PServerURL = section.Key("server").String()
 	port, err := strconv.Atoi(section.Key("port").String())
 	PServerPort = port
+}
+
+func GetSetting(secNm string, settingNm string) string {
+	inidata, err := ini.Load("iset.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		os.Exit(1)
+	}
+	section := inidata.Section(secNm)  
+	return section.Key(settingNm).String()
 }
 
 func writeSetting() {
@@ -114,17 +124,16 @@ func writeSetting() {
 	}
 }
 
-func updateSetting() {
+func UpdateSetting(sec string, keydat string, valdat string) {
 	inidata, err := ini.Load("iset.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)
 	}
-	section := inidata.Section("database")
-	section.Key("host").SetValue("127.0.0.0")
-	section.Key("port").SetValue("3306")
+	section := inidata.Section(sec)
+	section.Key(keydat).SetValue(valdat)
 
-	err = inidata.SaveTo("config.ini")
+	err = inidata.SaveTo("iset.ini")
 	if err != nil {
 		panic(err)
 	}

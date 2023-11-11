@@ -18,6 +18,46 @@ func ProcessCmd(command string) (string, string) {
 	ret := "The command you seek does not seem to exist in the Royal Libraries...."
 	dmsgt := "default"
 	switch {
+		case strings.Contains(command, "givetransskills") :
+			var params = strings.ReplaceAll(command, "givetransskills ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
+			if (params == "givetransskills") {
+				ret = "You have not entered any variables!"
+			} else {
+				ret = giveTransSkills(params)
+			}
+			return dmsgt, ret
+		case strings.Contains(command, "settrans") :
+			var params = strings.ReplaceAll(command, "settrans ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
+			if (params == "settrans") {
+				ret = "You have not entered any variables!"
+			} else {
+				ret = setTrans(params)
+			}
+			return dmsgt, ret
+		case strings.Contains(command, "setlevel") :
+			var params = strings.ReplaceAll(command, "setlevel ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
+			if (params == "setlevel") {
+				ret = "You have not entered any variables!"
+			} else {
+				ret = setCharLevel(params)
+			}
+			return dmsgt, ret
+		case strings.Contains(command, "giveap") :
+			var params = strings.ReplaceAll(command, "giveap ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
+			if (params == "giveap") {
+				ret = "You have not entered any variables!"
+			} else {
+				ret = giveAPToChar(params)
+			}
+			return dmsgt, ret
+		case strings.Contains(command, "changecharname") :
+			var params = strings.ReplaceAll(command, "changecharname ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
+			if (params == "changecharname") {
+				ret = "You have not entered any variables!"
+			} else {
+				ret = changeUserName(params)
+			}
+			return dmsgt, ret
 		case strings.Contains(command, "findalts") :
 			var accountID = strings.ReplaceAll(command, "findalts ", "") //if no data is entered, this will not remove the command from the string because of the space. will need this check for each switch statement
 			if (accountID == "findalts") {

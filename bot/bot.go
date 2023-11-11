@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	//"fmt"
 	
 	"bloodreddawn.com/IsetGo/config"
 	"bloodreddawn.com/IsetGo/logging"
@@ -83,15 +84,38 @@ func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 	}
 	
 	var msgContent = strings.ReplaceAll(message.Content, BotPrefix + " ", "")
-
+	
+	words := strings.Fields(msgContent)
+	if (!hasPermission(message.Author.ID, words[0])) {
+		discord.ChannelMessageSend(message.ChannelID, "You do not have permission to use this command!");
+		return
+	}
+	
+	var commandSent = words[0]
+	
 	// Respond to messages
 	switch {
-		case strings.Contains(msgContent, "hello"):
+		case commandSent == "hello":
 			discord.ChannelMessageSend(message.ChannelID, "Hi there!")
-		case strings.Contains(msgContent, "version"):
+		case commandSent == "addperm":
+			permdata := addPermission(words[1], words[2])
+			if (permdata) {
+				discord.ChannelMessageSend(message.ChannelID, "Permissions added!")
+			} else {
+				discord.ChannelMessageSend(message.ChannelID, "Failed to add permissions!")
+			}
+		case commandSent == "removeperm":
+			permdata := removePermission(words[1], words[2])
+			if (permdata) {
+				discord.ChannelMessageSend(message.ChannelID, "Permissions removed!")
+			} else {
+				discord.ChannelMessageSend(message.ChannelID, "Failed to remove permissions!")
+			}
+		
+		case commandSent == "version":
 			discord.ChannelMessageSend(message.ChannelID, "I am currently running on Version " + BotVersion + "!" + CheckUpdate(config.AutoDLUpdate))
 			
-		case strings.Contains(msgContent, "help"):
+		case commandSent == "help":
 			commandHelp := displayHelp(msgContent)
 			discord.ChannelMessageSendComplex(message.ChannelID, commandHelp)
 		default:
